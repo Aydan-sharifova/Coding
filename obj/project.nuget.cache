@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "nMq5IgN7hlg=",
+  "dgSpecHash": "T2lyS0C+OMG/HvoCglvY5Er6+OPCLVaWk6wwy1EvRujrViuzLy82NqAMxTt3S+UoXWIQnDlQJ4Jk4q9rtzdYmA==",
   "success": true,
   "projectFilePath": "/Users/aydansrifova/Desktop/Coding/Coding.csproj",
   "expectedPackageFiles": [
@@ -95,10 +95,7 @@
     "/Users/aydansrifova/.nuget/packages/system.text.encoding.codepages/6.0.0/system.text.encoding.codepages.6.0.0.nupkg.sha512",
     "/Users/aydansrifova/.nuget/packages/system.text.encodings.web/10.0.3/system.text.encodings.web.10.0.3.nupkg.sha512",
     "/Users/aydansrifova/.nuget/packages/system.text.json/10.0.3/system.text.json.10.0.3.nupkg.sha512",
-    "/Users/aydansrifova/.nuget/packages/system.threading.channels/6.0.0/system.threading.channels.6.0.0.nupkg.sha512",
-    "/Users/aydansrifova/.nuget/packages/microsoft.netcore.app.ref/8.0.25/microsoft.netcore.app.ref.8.0.25.nupkg.sha512",
-    "/Users/aydansrifova/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.25/microsoft.aspnetcore.app.ref.8.0.25.nupkg.sha512",
-    "/Users/aydansrifova/.nuget/packages/microsoft.netcore.app.host.osx-arm64/8.0.25/microsoft.netcore.app.host.osx-arm64.8.0.25.nupkg.sha512"
+    "/Users/aydansrifova/.nuget/packages/system.threading.channels/6.0.0/system.threading.channels.6.0.0.nupkg.sha512"
   ],
   "logs": []
 }

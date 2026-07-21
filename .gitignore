@@ -1,0 +1,10 @@
+.DS_Store
+.env
+.vs/
+.vscode/
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+*.user
+*.suo

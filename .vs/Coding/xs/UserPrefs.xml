@@ -1,5 +1,13 @@
-﻿<Properties StartupConfiguration="{73E59828-8DA3-4522-BC8E-CA171459BC44}|https">
-  <MonoDevelop.Ide.Workbench ActiveDocument="Controllers/AIResponseController.cs">
+﻿<Properties StartupConfiguration="{E922C6EC-4C3F-4919-A216-7B43E4DE5F00}|https">
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.ItemProperties.src.Coding.Api PreferredExecutionTarget="/Applications/Google Chrome.app" />
+  <MultiItemStartupConfigurations />
+  <MonoDevelop.Ide.ItemProperties.Coding.Application FirstBuild="True" />
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.ItemProperties.Coding PreferredExecutionTarget="/Applications/Google Chrome.app" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="src/Coding.Api/Dockerfile">
     <Files>
       <File FileName="Models/User.cs" />
       <File FileName="Models/Role.cs" />
@@ -17,52 +25,41 @@
       <File FileName="Models/Invitation.cs" />
       <File FileName="Models/GitCommit.cs" />
       <File FileName="Models/AIRequest.cs" />
-      <File FileName="Models/AIResponse.cs" Line="2" Column="21" />
+      <File FileName="Models/AIResponse.cs" />
       <File FileName="Enums/WorkspaceRole.cs" />
-      <File FileName="Enums/ProjectRole.cs" />
-      <File FileName="Enums/NotificationType.cs" />
-      <File FileName="Enums/InvitationStatus.cs" />
-      <File FileName="Enums/AIRequestType.cs" />
-      <File FileName="Data/AppDbContext.cs" />
-      <File FileName="Program.cs" />
-      <File FileName="Extentions/FileExtention.cs" Line="9" Column="30" />
+      <File FileName="Enums/ProjectRole.cs" Line="1" Column="1" />
+      <File FileName="Enums/NotificationType.cs" Line="1" Column="1" />
+      <File FileName="Enums/InvitationStatus.cs" Line="1" Column="1" />
+      <File FileName="Enums/AIRequestType.cs" Line="1" Column="1" />
+      <File FileName="Data/AppDbContext.cs" Line="1" Column="1" />
+      <File FileName="Program.cs" Line="1" Column="1" />
+      <File FileName="Extentions/FileExtention.cs" />
       <File FileName="Enums/ViewType.cs" />
       <File FileName="Models/BaseEntity/Base.cs" />
-      <File FileName="DTOS/User/UserCreateDTO.cs" Line="5" Column="62" />
-      <File FileName="DTOS/User/UserGetDTO.cs" Line="11" Column="1" />
-      <File FileName="DTOS/User/UserUpdateDTO.cs" Line="10" Column="41" />
-      <File FileName="DTOS/AIRequest/AIRequestUpdateDTO.cs" Line="1" Column="1" />
-      <File FileName="DTOS/AIRequest/AIRequestGetDTO.cs" Line="1" Column="1" />
-      <File FileName="DTOS/AIResponse/AIResponseCreateDTO.cs" Line="1" Column="1" />
-      <File FileName="DTOS/AIResponse/AIResponseGetDTO.cs" Line="1" Column="1" />
-      <File FileName="DTOS/AIResponse/AIResponseUpdateDTO.cs" Line="1" Column="1" />
-      <File FileName="Controllers/AIRequestController.cs" Line="1" Column="1" />
-      <File FileName="Services/Interfaces/ICrudService.cs" Line="1" Column="1" />
-      <File FileName="Services/Implaments/CrudService.cs" Line="1" Column="1" />
+      <File FileName="DTOS/User/UserCreateDTO.cs" />
+      <File FileName="DTOS/User/UserGetDTO.cs" />
+      <File FileName="DTOS/User/UserUpdateDTO.cs" />
+      <File FileName="DTOS/AIRequest/AIRequestUpdateDTO.cs" />
+      <File FileName="DTOS/AIRequest/AIRequestGetDTO.cs" />
+      <File FileName="DTOS/AIResponse/AIResponseCreateDTO.cs" />
+      <File FileName="DTOS/AIResponse/AIResponseGetDTO.cs" />
+      <File FileName="DTOS/AIResponse/AIResponseUpdateDTO.cs" />
+      <File FileName="Controllers/AIRequestController.cs" />
+      <File FileName="Services/Interfaces/ICrudService.cs" />
+      <File FileName="Services/Implaments/CrudService.cs" Line="37" Column="35" />
       <File FileName="Controllers/AIResponseController.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/Data/AppDbContextFactory.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Domain/Enums/FileSize.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/DependencyInjection.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Dockerfile" Line="1" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State name="__root__">
-          <Node name="Coding" expanded="True">
-            <Node name="Coding" expanded="True">
-              <Node name="Models" selected="True" />
-              <Node name="Services" expanded="True">
-                <Node name="Implaments" expanded="True" />
-                <Node name="Interfaces" expanded="True" />
-              </Node>
-            </Node>
-          </Node>
+          <Node name="Coding" expanded="True" />
         </State>
       </Pad>
     </Pads>
   </MonoDevelop.Ide.Workbench>
-  <MonoDevelop.Ide.ItemProperties.Coding.Application FirstBuild="True" />
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.ItemProperties.Coding PreferredExecutionTarget="/Applications/Google Chrome.app" />
-  <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore />
-  </MonoDevelop.Ide.DebuggingService.Breakpoints>
-  <MultiItemStartupConfigurations />
-  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
 </Properties>
