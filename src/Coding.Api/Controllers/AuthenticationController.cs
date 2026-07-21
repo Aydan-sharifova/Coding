@@ -65,7 +65,7 @@ public sealed class AuthenticationController : ControllerBase
                 cancellationToken);
         }
 
-        Response.Cookies.Delete(RefreshTokenCookie);
+        Response.Cookies.Delete(RefreshTokenCookie, GetRefreshTokenCookieOptions());
         return NoContent();
     }
 
@@ -111,16 +111,20 @@ public sealed class AuthenticationController : ControllerBase
 
     private void SetRefreshTokenCookie(string token)
     {
-        Response.Cookies.Append(RefreshTokenCookie, token, new CookieOptions
+        Response.Cookies.Append(RefreshTokenCookie, token, GetRefreshTokenCookieOptions());
+    }
+
+    private CookieOptions GetRefreshTokenCookieOptions()
+    {
+        return new CookieOptions
         {
             HttpOnly = true,
-            Secure = !HttpContext.RequestServices
-                .GetRequiredService<IWebHostEnvironment>().IsDevelopment(),
+            Secure = Request.IsHttps,
             SameSite = SameSiteMode.Strict,
             Path = "/api/auth",
             MaxAge = TimeSpan.FromDays(30),
             IsEssential = true
-        });
+        };
     }
 
     private static object ToPublicResponse(AuthResponse response) => new

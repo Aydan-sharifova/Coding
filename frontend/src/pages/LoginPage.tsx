@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { FormField } from "../components/FormField";
@@ -13,7 +14,8 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, session, isInitializing } = useAuth();
+  const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -24,10 +26,13 @@ export function LoginPage() {
     setServerError(null);
     try {
       await login(values);
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       setServerError(error instanceof Error ? error.message : "Sign in failed. Please try again.");
     }
   });
+
+  if (!isInitializing && session) return <Navigate to="/dashboard" replace />;
 
   return (
     <>

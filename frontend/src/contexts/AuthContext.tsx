@@ -1,9 +1,10 @@
-import { createContext, useCallback, useMemo, useState, type PropsWithChildren } from "react";
+import { createContext, useCallback, useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { authService } from "../services/authService";
 import type { AuthResponse, LoginPayload, RegisterPayload } from "../types/auth";
 
 interface AuthContextValue {
   session: AuthResponse | null;
+  isInitializing: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
@@ -13,6 +14,16 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<AuthResponse | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    authService.refresh()
+      .then((restoredSession) => { if (active) setSession(restoredSession); })
+      .catch(() => { if (active) setSession(null); })
+      .finally(() => { if (active) setIsInitializing(false); });
+    return () => { active = false; };
+  }, []);
 
   const login = useCallback(async (payload: LoginPayload) => {
     setSession(await authService.login(payload));
@@ -27,6 +38,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setSession(null);
   }, []);
 
-  const value = useMemo(() => ({ session, login, register, logout }), [session, login, register, logout]);
+  const value = useMemo(() => ({ session, isInitializing, login, register, logout }), [session, isInitializing, login, register, logout]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

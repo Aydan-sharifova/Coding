@@ -1,5 +1,14 @@
 # Frontend
 
-This directory contains the frontend architecture only. No framework or product features have been implemented yet.
+React frontend for the Coding platform. Authentication is connected to the ASP.NET Core API through an HTTP-only refresh-token cookie and in-memory JWT access tokens.
 
-The `src` folders define the intended boundaries for components, pages, layouts, hooks, API services, contexts, state stores, types, and utilities.
+## Local development
+
+Start the API on its configured HTTP port (`5192`), then run:
+
+```bash
+npm install
+npm run dev
+```
+
+Vite proxies `/api` to the backend, matching the same-origin setup used by Nginx in Docker. Set `VITE_API_URL` only when the API must be reached through a different origin.

@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { FormField } from "../components/FormField";
@@ -20,7 +21,8 @@ const registerSchema = z.object({
 type RegisterValues = z.infer<typeof registerSchema>;
 
 export function RegisterPage() {
-  const { register: createAccount } = useAuth();
+  const { register: createAccount, session, isInitializing } = useAuth();
+  const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
@@ -31,10 +33,13 @@ export function RegisterPage() {
     setServerError(null);
     try {
       await createAccount(values);
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       setServerError(error instanceof Error ? error.message : "Registration failed. Please try again.");
     }
   });
+
+  if (!isInitializing && session) return <Navigate to="/dashboard" replace />;
 
   return (
     <>

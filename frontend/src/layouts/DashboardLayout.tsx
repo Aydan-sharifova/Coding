@@ -1,0 +1,50 @@
+import { useState } from "react";
+import { NavLink, Outlet } from "react-router-dom";
+import { Icon, type IconName } from "../components/Icon";
+import { useAuth } from "../hooks/useAuth";
+import { useTheme } from "../hooks/useTheme";
+
+const navItems: Array<{ label: string; path: string; icon: IconName }> = [
+  { label: "Overview", path: "/dashboard", icon: "dashboard" },
+  { label: "Projects", path: "/projects", icon: "folder" },
+  { label: "Activity", path: "/activity", icon: "activity" },
+  { label: "Team", path: "/team", icon: "team" },
+];
+
+export function DashboardLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { session } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const user = session?.user;
+  const initials = user ? `${user.firstName[0]}${user.lastName[0]}` : "AD";
+
+  return (
+    <div className="dashboard-shell">
+      <aside className={`sidebar ${sidebarOpen ? "is-open" : ""}`}>
+        <div className="sidebar-brand"><span className="brand-mark">C</span><span>Coding</span></div>
+        <nav className="sidebar-nav" aria-label="Main navigation">
+          <p>Workspace</p>
+          {navItems.map((item) => <NavLink key={item.label} to={item.path} end={item.path === "/dashboard"} onClick={() => setSidebarOpen(false)}><Icon name={item.icon} />{item.label}</NavLink>)}
+          <p>Manage</p>
+          <NavLink to="/settings"><Icon name="settings" />Settings</NavLink>
+          <NavLink to="/help"><Icon name="help" />Help center</NavLink>
+        </nav>
+        <div className="sidebar-upgrade"><span><Icon name="trend" /></span><strong>Unlock more insights</strong><p>Upgrade your workspace to access advanced analytics.</p><button>View plans</button></div>
+        <div className="sidebar-user"><span className="avatar">{initials}</span><div><strong>{user ? `${user.firstName} ${user.lastName}` : "Alex Developer"}</strong><small>{user?.email ?? "alex@coding.dev"}</small></div><Icon name="chevron" /></div>
+      </aside>
+      {sidebarOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
+      <div className="dashboard-main">
+        <header className="topbar">
+          <button className="icon-button mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><Icon name="menu" /></button>
+          <label className="dashboard-search"><Icon name="search" /><input type="search" placeholder="Search projects, activity..." aria-label="Search" /><kbd>⌘ K</kbd></label>
+          <div className="topbar-actions">
+            <button className="icon-button" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}><Icon name={theme === "dark" ? "sun" : "moon"} /></button>
+            <button className="icon-button notification-button" aria-label="Notifications"><Icon name="bell" /><span /></button>
+            <button className="create-button"><Icon name="plus" /> New project</button>
+          </div>
+        </header>
+        <Outlet />
+      </div>
+    </div>
+  );
+}
