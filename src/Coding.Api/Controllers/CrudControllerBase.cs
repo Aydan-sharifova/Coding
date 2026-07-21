@@ -3,10 +3,12 @@ using Coding.Enums;
 using Coding.Models;
 using Coding.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Coding.Controllers
 {
     [ApiController]
+    [Authorize]
     public abstract class CrudControllerBase<TEntity, TCreate, TUpdate, TGet> : ControllerBase
         where TEntity : Base
     {

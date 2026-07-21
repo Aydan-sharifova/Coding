@@ -26,7 +26,13 @@ namespace Coding.Models
 
         public DateTime UpdatedAt { get; set; }
 
+        public DateTime? EmailVerifiedAt { get; set; }
+
         public ICollection<RefreshToken> RefreshTokens { get; set; }
+
+        public ICollection<AccountToken> AccountTokens { get; set; }
+
+        public ICollection<UserRole> UserRoles { get; set; }
 
         public ICollection<WorkspaceMember> WorkspaceMembers { get; set; }
 
@@ -39,4 +45,3 @@ namespace Coding.Models
         public ICollection<CodeHistory> CodeHistories { get; set; }
     }
 }
-

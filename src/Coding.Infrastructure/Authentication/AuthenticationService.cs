@@ -1,0 +1,299 @@
+using Coding.Data;
+using Coding.DTOS.Auth;
+using Coding.Enums;
+using Coding.Exceptions;
+using Coding.Models;
+using Coding.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace Coding.Infrastructure.Authentication;
+
+public sealed class AuthenticationService(
+     AppDbContext context,
+    IEmailSender emailSender,
+    IConfiguration configuration) : IAuthenticationService
+{
+    private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
+    private static readonly TimeSpan AccountTokenLifetime = TimeSpan.FromHours(1);
+
+    public async Task<AuthResponse> RegisterAsync(
+        RegisterRequest request,
+        CancellationToken cancellationToken)
+    {
+        var email = NormalizeEmail(request.Email);
+        var userName = request.UserName.Trim();
+
+        if (await context.Users.AnyAsync(
+                user => user.Email.ToLower() == email || user.UserName.ToLower() == userName.ToLower(),
+                cancellationToken))
+        {
+            throw new ConflictException("An account with that email or username already exists.");
+        }
+
+        var guestRole = await context.Roles.SingleAsync(
+            role => role.Name == SystemRoles.Guest,
+            cancellationToken);
+
+        var now = DateTime.UtcNow;
+        var user = new User
+        {
+            FirstName = request.FirstName.Trim(),
+            LastName = request.LastName.Trim(),
+            UserName = userName,
+            Email = email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
+            CreatedAt = now,
+            UpdatedAt = now,
+            LastSeen = now,
+            UserRoles = [],
+            RefreshTokens = [],
+            AccountTokens = []
+        };
+
+        user.UserRoles.Add(new UserRole { Role = guestRole, User = user });
+
+        var verification = CreateAccountToken(user, AccountTokenType.EmailVerification);
+        user.AccountTokens.Add(verification.Entity);
+
+        context.Users.Add(user);
+        await context.SaveChangesAsync(cancellationToken);
+
+        await emailSender.SendEmailVerificationAsync(
+            user.Email,
+            verification.PlainTextToken,
+            cancellationToken);
+
+        return await IssueTokensAsync(user, [SystemRoles.Guest], cancellationToken);
+    }
+
+    public async Task<AuthResponse> LoginAsync(
+        LoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        var email = NormalizeEmail(request.Email);
+        var user = await context.Users
+            .Include(item => item.UserRoles)
+            .ThenInclude(item => item.Role)
+            .SingleOrDefaultAsync(item => item.Email.ToLower() == email && !item.IsDeleted, cancellationToken);
+
+        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            throw new UnauthorizedException("Invalid email or password.");
+
+        user.LastSeen = DateTime.UtcNow;
+        var roles = user.UserRoles.Select(item => item.Role.Name).Distinct().ToArray();
+        return await IssueTokensAsync(user, roles, cancellationToken);
+    }
+
+    public async Task<AuthResponse> RefreshAsync(
+        RefreshTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        var tokenHash = HashToken(request.RefreshToken);
+        var storedToken = await context.RefreshTokens
+            .Include(item => item.User)
+            .ThenInclude(item => item.UserRoles)
+            .ThenInclude(item => item.Role)
+            .SingleOrDefaultAsync(item => item.Token == tokenHash, cancellationToken);
+
+        if (storedToken is null || storedToken.IsRevoked || storedToken.ExpireDate <= DateTime.UtcNow)
+            throw new UnauthorizedException("The refresh token is invalid or expired.");
+
+        storedToken.IsRevoked = true;
+        storedToken.UpdateAt = DateTime.UtcNow;
+
+        var roles = storedToken.User.UserRoles.Select(item => item.Role.Name).Distinct().ToArray();
+        return await IssueTokensAsync(storedToken.User, roles, cancellationToken);
+    }
+
+    public async Task RevokeAsync(
+        RefreshTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        var tokenHash = HashToken(request.RefreshToken);
+        var token = await context.RefreshTokens.SingleOrDefaultAsync(
+            item => item.Token == tokenHash,
+            cancellationToken);
+
+        if (token is null) return;
+
+        token.IsRevoked = true;
+        token.UpdateAt = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RequestEmailVerificationAsync(
+        EmailRequest request,
+        CancellationToken cancellationToken)
+    {
+        var user = await FindUserByEmailAsync(request.Email, cancellationToken);
+        if (user is null || user.EmailVerifiedAt.HasValue) return;
+
+        await InvalidateAccountTokensAsync(user.ID, AccountTokenType.EmailVerification, cancellationToken);
+        var token = CreateAccountToken(user, AccountTokenType.EmailVerification);
+        context.AccountTokens.Add(token.Entity);
+        await context.SaveChangesAsync(cancellationToken);
+        await emailSender.SendEmailVerificationAsync(user.Email, token.PlainTextToken, cancellationToken);
+    }
+
+    public async Task VerifyEmailAsync(
+        VerifyEmailRequest request,
+        CancellationToken cancellationToken)
+    {
+        var token = await GetValidAccountTokenAsync(
+            request.Token,
+            AccountTokenType.EmailVerification,
+            cancellationToken);
+
+        token.ConsumedAt = DateTime.UtcNow;
+        token.User.EmailVerifiedAt = DateTime.UtcNow;
+        token.User.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RequestPasswordResetAsync(
+        EmailRequest request,
+        CancellationToken cancellationToken)
+    {
+        var user = await FindUserByEmailAsync(request.Email, cancellationToken);
+        if (user is null) return;
+
+        await InvalidateAccountTokensAsync(user.ID, AccountTokenType.PasswordReset, cancellationToken);
+        var token = CreateAccountToken(user, AccountTokenType.PasswordReset);
+        context.AccountTokens.Add(token.Entity);
+        await context.SaveChangesAsync(cancellationToken);
+        await emailSender.SendPasswordResetAsync(user.Email, token.PlainTextToken, cancellationToken);
+    }
+
+    public async Task ResetPasswordAsync(
+        ResetPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var token = await GetValidAccountTokenAsync(
+            request.Token,
+            AccountTokenType.PasswordReset,
+            cancellationToken);
+
+        token.ConsumedAt = DateTime.UtcNow;
+        token.User.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword, 12);
+        token.User.UpdatedAt = DateTime.UtcNow;
+
+        await context.RefreshTokens
+            .Where(item => item.UserId == token.UserId && !item.IsRevoked)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.IsRevoked, true), cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<AuthResponse> IssueTokensAsync(
+        User user,
+        IReadOnlyCollection<string> roles,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        var expiresAt = now.AddMinutes(configuration.GetValue("Jwt:AccessTokenMinutes", 15));
+        var key = configuration["Jwt:Key"]!;
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.ID.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new(JwtRegisteredClaimNames.UniqueName, user.UserName),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+            SecurityAlgorithms.HmacSha256);
+
+        var jwt = new JwtSecurityToken(
+            configuration["Jwt:Issuer"],
+            configuration["Jwt:Audience"],
+            claims,
+            now,
+            expiresAt,
+            credentials);
+
+        var plainRefreshToken = GenerateToken();
+        context.RefreshTokens.Add(new RefreshToken
+        {
+            UserId = user.ID,
+            Token = HashToken(plainRefreshToken),
+            ExpireDate = now.Add(RefreshTokenLifetime),
+            CreatAt = now
+        });
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new AuthResponse(
+            new JwtSecurityTokenHandler().WriteToken(jwt),
+            plainRefreshToken,
+            expiresAt,
+            new AuthenticatedUser(
+                user.ID,
+                user.FirstName,
+                user.LastName,
+                user.UserName,
+                user.Email,
+                user.EmailVerifiedAt.HasValue,
+                roles));
+    }
+
+    private async Task<AccountToken> GetValidAccountTokenAsync(
+        string plainToken,
+        AccountTokenType type,
+        CancellationToken cancellationToken)
+    {
+        var hash = HashToken(plainToken);
+        var token = await context.AccountTokens
+            .Include(item => item.User)
+            .SingleOrDefaultAsync(item =>
+                item.TokenHash == hash &&
+                item.Type == type &&
+                item.ConsumedAt == null &&
+                item.ExpiresAt > DateTime.UtcNow,
+                cancellationToken);
+
+        return token ?? throw new UnauthorizedException("The token is invalid or expired.");
+    }
+
+    private async Task<User?> FindUserByEmailAsync(string email, CancellationToken cancellationToken) =>
+        await context.Users.SingleOrDefaultAsync(
+            user => user.Email.ToLower() == NormalizeEmail(email) && !user.IsDeleted,
+            cancellationToken);
+
+    private async Task InvalidateAccountTokensAsync(
+        Guid userId,
+        AccountTokenType type,
+        CancellationToken cancellationToken) =>
+        await context.AccountTokens
+            .Where(item => item.UserId == userId && item.Type == type && item.ConsumedAt == null)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(item => item.ConsumedAt, DateTime.UtcNow),
+                cancellationToken);
+
+    private static (AccountToken Entity, string PlainTextToken) CreateAccountToken(
+        User user,
+        AccountTokenType type)
+    {
+        var plainText = GenerateToken();
+        return (new AccountToken
+        {
+            User = user,
+            UserId = user.ID,
+            Type = type,
+            TokenHash = HashToken(plainText),
+            ExpiresAt = DateTime.UtcNow.Add(AccountTokenLifetime)
+        }, plainText);
+    }
+
+    private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+    private static string GenerateToken() => Base64UrlEncoder.Encode(RandomNumberGenerator.GetBytes(64));
+    private static string HashToken(string token) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+}

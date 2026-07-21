@@ -18,6 +18,8 @@ namespace Coding.Data
 
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+        public DbSet<AccountToken> AccountTokens => Set<AccountToken>();
+
         public DbSet<Workspace> Workspaces => Set<Workspace>();
 
         public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
@@ -53,4 +55,3 @@ namespace Coding.Data
         }
     }
 }
-

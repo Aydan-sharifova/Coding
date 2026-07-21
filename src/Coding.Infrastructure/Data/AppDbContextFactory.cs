@@ -8,8 +8,14 @@ namespace Coding.Data
     {
         public AppDbContext CreateDbContext(string[] args)
         {
+            var workingDirectory = Directory.GetCurrentDirectory();
+            var apiDirectory = Path.Combine(workingDirectory, "src", "Coding.Api");
+            var configurationDirectory = Directory.Exists(apiDirectory)
+                ? apiDirectory
+                : workingDirectory;
+
             var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
+                .SetBasePath(configurationDirectory)
                 .AddJsonFile("appsettings.json", optional: false)
                 .AddJsonFile("appsettings.Development.json", optional: true)
                 .AddEnvironmentVariables()

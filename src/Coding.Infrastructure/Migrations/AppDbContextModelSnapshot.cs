@@ -109,6 +109,51 @@ namespace Coding.Migrations
                     b.ToTable("AIResponses");
                 });
 
+            modelBuilder.Entity("Coding.Models.AccountToken", b =>
+                {
+                    b.Property<Guid>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdateAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AccountTokens");
+                });
+
             modelBuilder.Entity("Coding.Models.CodeHistory", b =>
                 {
                     b.Property<Guid>("ID")
@@ -523,7 +568,8 @@ namespace Coding.Migrations
 
                     b.Property<string>("Token")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTime?>("UpdateAt")
                         .HasColumnType("timestamp with time zone");
@@ -532,6 +578,9 @@ namespace Coding.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("ID");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
 
                     b.HasIndex("UserId");
 
@@ -559,14 +608,44 @@ namespace Coding.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("UpdateAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("ID");
 
+                    b.HasIndex("Name")
+                        .IsUnique();
+
                     b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            ID = new Guid("11111111-1111-1111-1111-111111111111"),
+                            CreatAt = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Built-in Admin role.",
+                            IsDeleted = false,
+                            Name = "Admin"
+                        },
+                        new
+                        {
+                            ID = new Guid("22222222-2222-2222-2222-222222222222"),
+                            CreatAt = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Built-in Developer role.",
+                            IsDeleted = false,
+                            Name = "Developer"
+                        },
+                        new
+                        {
+                            ID = new Guid("33333333-3333-3333-3333-333333333333"),
+                            CreatAt = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Built-in Guest role.",
+                            IsDeleted = false,
+                            Name = "Guest"
+                        });
                 });
 
             modelBuilder.Entity("Coding.Models.User", b =>
@@ -592,7 +671,11 @@ namespace Coding.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -613,7 +696,8 @@ namespace Coding.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("UpdateAt")
                         .HasColumnType("timestamp with time zone");
@@ -623,9 +707,16 @@ namespace Coding.Migrations
 
                     b.Property<string>("UserName")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.HasKey("ID");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("UserName")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });
@@ -658,7 +749,8 @@ namespace Coding.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "RoleId")
+                        .IsUnique();
 
                     b.ToTable("UserRoles");
                 });
@@ -771,6 +863,17 @@ namespace Coding.Migrations
                         .IsRequired();
 
                     b.Navigation("AIRequest");
+                });
+
+            modelBuilder.Entity("Coding.Models.AccountToken", b =>
+                {
+                    b.HasOne("Coding.Models.User", "User")
+                        .WithMany("AccountTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Coding.Models.CodeHistory", b =>
@@ -930,7 +1033,7 @@ namespace Coding.Migrations
                         .IsRequired();
 
                     b.HasOne("Coding.Models.User", "User")
-                        .WithMany()
+                        .WithMany("UserRoles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1003,6 +1106,8 @@ namespace Coding.Migrations
 
             modelBuilder.Entity("Coding.Models.User", b =>
                 {
+                    b.Navigation("AccountTokens");
+
                     b.Navigation("CodeHistories");
 
                     b.Navigation("Messages");
@@ -1012,6 +1117,8 @@ namespace Coding.Migrations
                     b.Navigation("ProjectMembers");
 
                     b.Navigation("RefreshTokens");
+
+                    b.Navigation("UserRoles");
 
                     b.Navigation("WorkspaceMembers");
                 });

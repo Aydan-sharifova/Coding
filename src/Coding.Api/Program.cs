@@ -1,5 +1,6 @@
 using Coding.Api.Configuration;
 using Coding.Infrastructure;
+using Coding.Data;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -31,6 +32,11 @@ try
 
     var app = builder.Build();
 
+    if (builder.Configuration.GetValue("Database:ApplyMigrations", false))
+    {
+        await app.Services.InitializeDatabaseAsync();
+    }
+
     app.UseForwardedHeaders();
     app.UseSerilogRequestLogging();
     app.UseExceptionHandler();
@@ -52,6 +58,7 @@ try
 
     app.UseHttpsRedirection();
     app.UseCors("Client");
+    app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();
 

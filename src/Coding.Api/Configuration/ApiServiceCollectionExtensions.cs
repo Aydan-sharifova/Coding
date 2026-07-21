@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Coding.Api.Infrastructure;
+using System.Threading.RateLimiting;
 
 namespace Coding.Api.Configuration;
 
@@ -14,6 +16,7 @@ public static class ApiServiceCollectionExtensions
         services.AddControllers();
         services.AddEndpointsApiExplorer();
         services.AddProblemDetails();
+        services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddHttpClient();
         services.AddMemoryCache();
 
@@ -40,6 +43,20 @@ public static class ApiServiceCollectionExtensions
 
         services.AddJwtAuthentication(configuration);
         services.AddSwaggerDocumentation();
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy("auth", httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+        });
 
         var redisConnection = configuration.GetConnectionString("Redis");
         if (!string.IsNullOrWhiteSpace(redisConnection))

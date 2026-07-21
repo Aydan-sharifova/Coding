@@ -1,6 +1,7 @@
 using Coding.Data;
 using Coding.Services.Implaments;
 using Coding.Services.Interfaces;
+using Coding.Infrastructure.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,9 @@ public static class DependencyInjection
             .AddDbContextCheck<AppDbContext>("postgresql");
 
         services.AddScoped(typeof(ICrudService<,,,>), typeof(CrudService<,,,>));
+        services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<IRoleService, RoleService>();
+        services.AddScoped<IEmailSender, LoggingEmailSender>();
 
         return services;
     }
