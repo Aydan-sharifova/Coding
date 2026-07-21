@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap");
+@import "tailwindcss";
 
 :root {
   font-family: "DM Sans", system-ui, sans-serif;
@@ -228,3 +229,82 @@ form { display: grid; gap: 1.15rem; }
   .activity-item time { grid-column: 2; }
   .chart-wrap { height: 14rem; padding-left: .65rem; }
 }
+
+/* Project feature */
+.feature-page { min-height: calc(100vh - 4.6rem); }
+.feature-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
+.feature-heading h1 { margin: .15rem 0 .4rem; font: 700 2rem "Manrope", sans-serif; letter-spacing: -.04em; }
+.feature-heading p { margin: 0; color: var(--dashboard-muted); font-size: .85rem; }
+.feature-project-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.feature-project-card { position: relative; padding: 1.4rem; border: 1px solid var(--dashboard-line); border-radius: .9rem; background: var(--surface); box-shadow: var(--shadow-soft); }
+.feature-project-icon { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; color: #fff; border-radius: .7rem; background: linear-gradient(145deg, #8073ef, #5948d0); font-size: .7rem; font-weight: 800; }
+.feature-project-card > .role-badge { position: absolute; top: 1.4rem; right: 1.4rem; }
+.feature-project-card h2 { margin: 1.1rem 0 .4rem; font: 700 1rem "Manrope", sans-serif; }
+.feature-project-card > p { min-height: 2.7rem; color: var(--dashboard-muted); font-size: .75rem; line-height: 1.6; }
+.feature-project-meta { display: flex; gap: 1rem; padding: .75rem 0; color: var(--dashboard-muted); border-top: 1px solid var(--dashboard-line); font-size: .68rem; }
+.feature-project-card > a { display: flex; justify-content: space-between; margin-top: .65rem; color: #6c5ce7; font-size: .74rem; }
+.role-badge { display: inline-flex; align-items: center; padding: .28rem .55rem; border-radius: 2rem; font-size: .63rem; font-weight: 700; }
+.role-badge.owner { color: #7252d8; background: rgba(108,92,231,.12); }
+.role-badge.admin { color: #2572ca; background: rgba(49,130,246,.11); }
+.role-badge.member { color: #11865f; background: rgba(16,168,117,.11); }
+.ui-button { min-height: 2.35rem; padding: .55rem .9rem; border: 1px solid transparent; border-radius: .58rem; font-size: .75rem; font-weight: 700; cursor: pointer; }
+.ui-button.primary { color: white; background: #6c5ce7; }
+.ui-button.ghost { color: var(--dashboard-text); border-color: var(--dashboard-line); background: var(--surface); }
+.ui-button.danger { color: white; background: #d84747; }
+.ui-button:disabled { opacity: .6; cursor: wait; }
+.dialog-layer { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgba(8,10,18,.62); backdrop-filter: blur(3px); }
+.dialog-card { position: relative; width: min(31rem, 100%); max-height: 90vh; overflow: auto; border: 1px solid var(--dashboard-line); border-radius: 1rem; background: var(--surface); box-shadow: 0 24px 80px rgba(0,0,0,.25); }
+.dialog-card > header, .dialog-body, .dialog-card > footer { padding: 1.3rem 1.5rem; }
+.dialog-card > header { padding-bottom: .5rem; }
+.dialog-card > header h2 { margin: 0; font: 700 1.2rem "Manrope", sans-serif; }
+.dialog-card > header p { margin: .45rem 0 0; color: var(--dashboard-muted); font-size: .75rem; line-height: 1.5; }
+.dialog-card > footer { display: flex; justify-content: flex-end; gap: .6rem; border-top: 1px solid var(--dashboard-line); }
+.dialog-close { position: absolute; top: .85rem; right: 1rem; color: var(--dashboard-muted); border: 0; background: none; font-size: 1.3rem; cursor: pointer; }
+.feature-form { display: grid; gap: 1rem; }
+.feature-form label { display: grid; gap: .4rem; color: var(--dashboard-text); font-size: .75rem; font-weight: 700; }
+.feature-form input, .feature-form textarea, .feature-form select, .member-row select { width: 100%; padding: .7rem .8rem; color: var(--dashboard-text); border: 1px solid var(--dashboard-line); border-radius: .55rem; outline: none; background: var(--surface-soft); font-size: .78rem; }
+.feature-form label > span { color: var(--danger); font-size: .66rem; font-weight: 500; }
+.feature-form .check-row { display: flex; align-items: flex-start; gap: .7rem; }
+.feature-form .check-row input { width: auto; margin-top: .25rem; }
+.feature-form .check-row span { color: var(--dashboard-text); }
+.feature-form .check-row small { display: block; margin-top: .2rem; color: var(--dashboard-muted); font-weight: 400; }
+.feature-state { display: grid; min-height: 18rem; place-items: center; align-content: center; gap: .7rem; padding: 2rem; color: var(--dashboard-muted); border: 1px dashed var(--dashboard-line); border-radius: .9rem; text-align: center; }
+.feature-state p { max-width: 26rem; margin: 0; font-size: .8rem; }
+.feature-state strong { color: var(--dashboard-text); }
+.spinner { width: 1.5rem; height: 1.5rem; border: 2px solid var(--dashboard-line); border-top-color: #6c5ce7; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.toast-region { position: fixed; z-index: 150; right: 1.25rem; bottom: 1.25rem; display: grid; gap: .5rem; }
+.toast { min-width: 16rem; padding: .85rem 1rem; color: white; border-radius: .65rem; background: #16845f; box-shadow: 0 12px 35px rgba(0,0,0,.2); font-size: .75rem; }
+.toast.error { background: #c64242; }
+.settings-layout { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; align-items: start; gap: 1rem; }
+.settings-main { display: grid; gap: 1rem; }
+.settings-card, .danger-card { border: 1px solid var(--dashboard-line); border-radius: .85rem; background: var(--surface); box-shadow: var(--shadow-soft); }
+.settings-card > header { display: flex; align-items: center; justify-content: space-between; padding: 1.2rem 1.3rem; border-bottom: 1px solid var(--dashboard-line); }
+.settings-card h2, .danger-card h2 { margin: 0 0 .25rem; font: 700 .92rem "Manrope", sans-serif; }
+.settings-card header p, .danger-card p { margin: 0; color: var(--dashboard-muted); font-size: .7rem; }
+.settings-card dl { display: grid; grid-template-columns: 1fr 1fr; margin: 0; padding: .5rem 1.3rem 1.2rem; }
+.settings-card dl div { padding: .8rem 0; }
+.settings-card dt { color: var(--dashboard-muted); font-size: .65rem; }
+.settings-card dd { margin: .3rem 0 0; font-size: .76rem; }
+.members-list { padding: 0 1.3rem; }
+.member-row { display: flex; align-items: center; gap: .75rem; padding: .9rem 0; border-bottom: 1px solid var(--dashboard-line); }
+.member-row:last-child { border-bottom: 0; }
+.member-row > div { flex: 1; min-width: 0; }
+.member-row strong, .member-row small { display: block; }
+.member-row strong { font-size: .75rem; }
+.member-row small { margin-top: .2rem; color: var(--dashboard-muted); font-size: .65rem; }
+.member-row select { width: 6.5rem; padding: .45rem; }
+.remove-action { color: #d84747; border: 0; background: none; font-size: .68rem; font-weight: 700; cursor: pointer; }
+.danger-card { padding: 1.2rem; border-color: rgba(216,71,71,.25); }
+.danger-card p { margin-bottom: 1rem; line-height: 1.5; }
+.back-link { padding: 0; color: #6c5ce7; border: 0; background: none; font-size: .7rem; cursor: pointer; }
+.muted-copy, .confirmation-note { padding: 1rem 1.3rem; color: var(--dashboard-muted); font-size: .72rem; }
+.invitation-page { display: grid; min-height: 100vh; place-items: center; padding: 1rem; background: var(--app-bg); }
+.invitation-card { width: min(30rem, 100%); padding: 2.4rem; color: var(--dashboard-text); border: 1px solid var(--dashboard-line); border-radius: 1rem; background: var(--surface); text-align: center; box-shadow: var(--shadow-soft); }
+.invitation-card .brand-mark { margin: 0 auto 1.2rem; }
+.invitation-card h1 { font: 700 1.6rem "Manrope", sans-serif; }
+.invitation-card > p:not(.dashboard-date) { color: var(--dashboard-muted); font-size: .8rem; line-height: 1.6; }
+.invitation-card > div:last-child { display: flex; justify-content: center; gap: .6rem; margin-top: 1.4rem; }
+
+@media (max-width: 1000px) { .feature-project-grid { grid-template-columns: repeat(2, 1fr); } .settings-layout { grid-template-columns: 1fr; } }
+@media (max-width: 620px) { .feature-project-grid { grid-template-columns: 1fr; } .feature-heading { align-items: flex-start; } .feature-heading .create-button { width: auto; padding: .55rem .8rem; font-size: .72rem; } .settings-card dl { grid-template-columns: 1fr; } .member-row { flex-wrap: wrap; } }

@@ -1,0 +1,3 @@
+export function LoadingState({ label = "Loading…" }: { label?: string }) { return <div className="feature-state"><span className="spinner" />{label}</div>; }
+export function EmptyState({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) { return <div className="feature-state empty"><strong>{title}</strong><p>{description}</p>{action}</div>; }
+export function ErrorState({ message, retry }: { message: string; retry?: () => void }) { return <div className="feature-state error"><strong>Something went wrong</strong><p>{message}</p>{retry && <button className="ui-button ghost" onClick={retry}>Try again</button>}</div>; }

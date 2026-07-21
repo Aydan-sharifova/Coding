@@ -1,0 +1,15 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { projectApi } from "./api";
+import type { ProjectInput, ProjectRole } from "./types";
+
+export const projectKeys = { all: ["projects"] as const, detail: (id: string) => ["projects", id] as const, members: (id: string) => ["projects", id, "members"] as const, invitations: (id: string) => ["projects", id, "invitations"] as const };
+export function useProjects() { return useQuery({ queryKey: projectKeys.all, queryFn: projectApi.list }); }
+export function useProject(id: string) { return useQuery({ queryKey: projectKeys.detail(id), queryFn: () => projectApi.details(id), enabled: Boolean(id) }); }
+export function useProjectMembers(id: string) { return useQuery({ queryKey: projectKeys.members(id), queryFn: () => projectApi.members(id), enabled: Boolean(id) }); }
+export function useProjectInvitations(id: string, enabled: boolean) { return useQuery({ queryKey: projectKeys.invitations(id), queryFn: () => projectApi.invitations(id), enabled: Boolean(id) && enabled }); }
+export function useCreateProject() { const client = useQueryClient(); return useMutation({ mutationFn: projectApi.create, onSuccess: () => client.invalidateQueries({ queryKey: projectKeys.all }) }); }
+export function useUpdateProject(id: string) { const client = useQueryClient(); return useMutation({ mutationFn: (input: ProjectInput) => projectApi.update(id, input), onSuccess: () => { client.invalidateQueries({ queryKey: projectKeys.all }); client.invalidateQueries({ queryKey: projectKeys.detail(id) }); } }); }
+export function useDeleteProject(id: string) { const client = useQueryClient(); return useMutation({ mutationFn: () => projectApi.remove(id), onSuccess: () => client.invalidateQueries({ queryKey: projectKeys.all }) }); }
+export function useInviteMember(id: string) { const client = useQueryClient(); return useMutation({ mutationFn: (input: { email: string; role: Exclude<ProjectRole, "Owner"> }) => projectApi.invite(id, input.email, input.role), onSuccess: () => client.invalidateQueries({ queryKey: projectKeys.invitations(id) }) }); }
+export function useChangeMemberRole(id: string) { const client = useQueryClient(); return useMutation({ mutationFn: ({ userId, role }: { userId: string; role: Exclude<ProjectRole, "Owner"> }) => projectApi.changeRole(id, userId, role), onSuccess: () => client.invalidateQueries({ queryKey: projectKeys.members(id) }) }); }
+export function useRemoveMember(id: string) { const client = useQueryClient(); return useMutation({ mutationFn: projectApi.removeMember.bind(null, id), onSuccess: () => client.invalidateQueries({ queryKey: projectKeys.members(id) }) }); }
