@@ -28,6 +28,8 @@ namespace Coding.Data
 
         public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
 
+        public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
+
         public DbSet<Folder> Folders => Set<Folder>();
 
         public DbSet<FileItem> FileItems => Set<FileItem>();

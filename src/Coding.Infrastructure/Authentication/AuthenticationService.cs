@@ -17,7 +17,8 @@ namespace Coding.Infrastructure.Authentication;
 public sealed class AuthenticationService(
      AppDbContext context,
     IEmailSender emailSender,
-    IConfiguration configuration) : IAuthenticationService
+    IConfiguration configuration,
+    IdentityPasswordService passwordService) : IAuthenticationService
 {
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
     private static readonly TimeSpan AccountTokenLifetime = TimeSpan.FromHours(1);
@@ -47,7 +48,7 @@ public sealed class AuthenticationService(
             LastName = request.LastName.Trim(),
             UserName = userName,
             Email = email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
+            PasswordHash = string.Empty,
             CreatedAt = now,
             UpdatedAt = now,
             LastSeen = now,
@@ -55,6 +56,7 @@ public sealed class AuthenticationService(
             RefreshTokens = [],
             AccountTokens = []
         };
+        user.PasswordHash = passwordService.Hash(user, request.Password);
 
         user.UserRoles.Add(new UserRole { Role = guestRole, User = user });
 
@@ -82,7 +84,7 @@ public sealed class AuthenticationService(
             .ThenInclude(item => item.Role)
             .SingleOrDefaultAsync(item => item.Email.ToLower() == email && !item.IsDeleted, cancellationToken);
 
-        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        if (user is null || !passwordService.Verify(user, request.Password))
             throw new UnauthorizedException("Invalid email or password.");
 
         user.LastSeen = DateTime.UtcNow;
@@ -180,7 +182,7 @@ public sealed class AuthenticationService(
             cancellationToken);
 
         token.ConsumedAt = DateTime.UtcNow;
-        token.User.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword, 12);
+        token.User.PasswordHash = passwordService.Hash(token.User, request.NewPassword);
         token.User.UpdatedAt = DateTime.UtcNow;
 
         await context.RefreshTokens

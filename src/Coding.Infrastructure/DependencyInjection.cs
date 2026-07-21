@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IEmailSender, LoggingEmailSender>();
+        services.AddScoped<IdentityPasswordService>();
 
         return services;
     }

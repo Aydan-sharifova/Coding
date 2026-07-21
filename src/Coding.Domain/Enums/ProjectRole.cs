@@ -4,9 +4,7 @@ namespace Coding.Enums
     public enum ProjectRole
     {
         Owner,
-        Maintainer,
-        Contributor,
-        Viewer
+        Admin,
+        Member
     }
 }
-

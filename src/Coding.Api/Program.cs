@@ -80,7 +80,4 @@ finally
     Log.CloseAndFlush();
 }
 
-public partial class Program
-{
-    public static object CreateHostBuilder(string[] args) => new();
-}
+public partial class Program;

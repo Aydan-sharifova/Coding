@@ -38,6 +38,8 @@ namespace Coding.Models
 
         public ICollection<ProjectMember> ProjectMembers { get; set; }
 
+        public ICollection<Project> OwnedProjects { get; set; } = [];
+
         public ICollection<Message> Messages { get; set; }
 
         public ICollection<Notification> Notifications { get; set; }

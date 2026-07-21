@@ -4,6 +4,13 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using Coding.Api.Infrastructure;
 using System.Threading.RateLimiting;
+using Coding.Application.Abstractions;
+using Coding.Application.Behaviors;
+using Coding.Application.Features.Projects;
+using Coding.Infrastructure.Projects;
+using FluentValidation;
+using MediatR;
+using System.Text.Json.Serialization;
 
 namespace Coding.Api.Configuration;
 
@@ -13,12 +20,19 @@ public static class ApiServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddControllers();
+        services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         services.AddEndpointsApiExplorer();
         services.AddProblemDetails();
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddHttpClient();
         services.AddMemoryCache();
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUser, CurrentUser>();
+        services.AddMediatR(configuration => configuration.RegisterServicesFromAssemblies(
+            typeof(CreateProjectCommand).Assembly,
+            typeof(CreateProjectHandler).Assembly));
+        services.AddValidatorsFromAssemblyContaining<CreateProjectValidator>();
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
         services.AddCors(options =>
         {

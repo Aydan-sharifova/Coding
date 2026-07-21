@@ -1,13 +1,59 @@
-using Coding.DTOS.Project;
-using Coding.Models;
-using Coding.Services.Interfaces;
+using Coding.Application.Features.Projects;
+using Coding.Enums;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Coding.Controllers
+namespace Coding.Controllers;
+
+[ApiController]
+[Authorize]
+[Route("api/projects")]
+public sealed class ProjectController(ISender sender) : ControllerBase
 {
-    [Route("api/[controller]")]
-    public class ProjectController : CrudControllerBase<Project, ProjectCreateDTO, ProjectUpdateDTO, ProjectGetDTO>
+    [HttpGet]
+    public async Task<IReadOnlyList<ProjectListItem>> List(CancellationToken cancellationToken) => await sender.Send(new ListMyProjectsQuery(), cancellationToken);
+
+    [HttpGet("{projectId:guid}")]
+    public async Task<ProjectDetails> Get(Guid projectId, CancellationToken cancellationToken) => await sender.Send(new GetProjectDetailsQuery(projectId), cancellationToken);
+
+    [HttpPost]
+    public async Task<ActionResult<ProjectDetails>> Create(CreateProjectRequest request, CancellationToken cancellationToken)
     {
-        public ProjectController(ICrudService<Project, ProjectCreateDTO, ProjectUpdateDTO, ProjectGetDTO> service) : base(service) { }
+        var project = await sender.Send(new CreateProjectCommand(request.Name, request.Description, request.DefaultLanguage, request.IsPublic), cancellationToken);
+        return CreatedAtAction(nameof(Get), new { projectId = project.Id }, project);
     }
+
+    [HttpPut("{projectId:guid}")]
+    public Task<ProjectDetails> Update(Guid projectId, UpdateProjectRequest request, CancellationToken cancellationToken) => sender.Send(new UpdateProjectCommand(projectId, request.Name, request.Description, request.DefaultLanguage, request.IsPublic), cancellationToken);
+
+    [HttpDelete("{projectId:guid}")]
+    public async Task<IActionResult> Delete(Guid projectId, CancellationToken cancellationToken) { await sender.Send(new DeleteProjectCommand(projectId), cancellationToken); return NoContent(); }
+
+    [HttpGet("{projectId:guid}/members")]
+    public Task<IReadOnlyList<ProjectMemberDetails>> Members(Guid projectId, CancellationToken cancellationToken) => sender.Send(new ListProjectMembersQuery(projectId), cancellationToken);
+
+    [HttpDelete("{projectId:guid}/members/{userId:guid}")]
+    public async Task<IActionResult> RemoveMember(Guid projectId, Guid userId, CancellationToken cancellationToken) { await sender.Send(new RemoveProjectMemberCommand(projectId, userId), cancellationToken); return NoContent(); }
+
+    [HttpPut("{projectId:guid}/members/{userId:guid}/role")]
+    public async Task<IActionResult> ChangeRole(Guid projectId, Guid userId, ChangeRoleRequest request, CancellationToken cancellationToken) { await sender.Send(new ChangeProjectMemberRoleCommand(projectId, userId, request.Role), cancellationToken); return NoContent(); }
+
+    [HttpPost("{projectId:guid}/invitations")]
+    public Task<CreatedInvitation> Invite(Guid projectId, InviteMemberRequest request, CancellationToken cancellationToken) => sender.Send(new InviteProjectMemberCommand(projectId, request.Email, request.Role), cancellationToken);
+
+    [HttpGet("{projectId:guid}/invitations")]
+    public Task<IReadOnlyList<ProjectInvitationDetails>> Invitations(Guid projectId, CancellationToken cancellationToken) => sender.Send(new ListPendingInvitationsQuery(projectId), cancellationToken);
+
+    [HttpPost("invitations/accept")]
+    public async Task<ActionResult<object>> Accept(InvitationTokenRequest request, CancellationToken cancellationToken) => Ok(new { ProjectId = await sender.Send(new AcceptProjectInvitationCommand(request.Token), cancellationToken) });
+
+    [HttpPost("invitations/reject")]
+    public async Task<IActionResult> Reject(InvitationTokenRequest request, CancellationToken cancellationToken) { await sender.Send(new RejectProjectInvitationCommand(request.Token), cancellationToken); return NoContent(); }
 }
+
+public sealed record CreateProjectRequest(string Name, string? Description, string DefaultLanguage, bool IsPublic);
+public sealed record UpdateProjectRequest(string Name, string? Description, string DefaultLanguage, bool IsPublic);
+public sealed record InviteMemberRequest(string Email, ProjectRole Role);
+public sealed record ChangeRoleRequest(ProjectRole Role);
+public sealed record InvitationTokenRequest(string Token);
