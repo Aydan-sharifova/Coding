@@ -1,0 +1,7 @@
+﻿@Coding_HostAddress = http://localhost:5192
+
+GET {{Coding_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+

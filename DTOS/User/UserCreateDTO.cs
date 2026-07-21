@@ -1,0 +1,17 @@
+namespace Coding.DTOS.User
+{
+    public class UserCreateDTO
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string? AvatarUrl { get; set; }
+        public string? Bio { get; set; }
+        public bool IsOnline { get; set; }
+        public DateTime LastSeen { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+    }
+}

@@ -1,0 +1,68 @@
+﻿<Properties StartupConfiguration="{73E59828-8DA3-4522-BC8E-CA171459BC44}|https">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Controllers/AIResponseController.cs">
+    <Files>
+      <File FileName="Models/User.cs" />
+      <File FileName="Models/Role.cs" />
+      <File FileName="Models/UserRole.cs" />
+      <File FileName="Models/RefreshToken.cs" />
+      <File FileName="Models/Workspace.cs" />
+      <File FileName="Models/WorkspaceMember.cs" />
+      <File FileName="Models/Project.cs" />
+      <File FileName="Models/ProjectMember.cs" />
+      <File FileName="Models/Folder.cs" />
+      <File FileName="Models/FileItem.cs" />
+      <File FileName="Models/CodeHistory.cs" />
+      <File FileName="Models/Message.cs" />
+      <File FileName="Models/Nofication.cs" />
+      <File FileName="Models/Invitation.cs" />
+      <File FileName="Models/GitCommit.cs" />
+      <File FileName="Models/AIRequest.cs" />
+      <File FileName="Models/AIResponse.cs" Line="2" Column="21" />
+      <File FileName="Enums/WorkspaceRole.cs" />
+      <File FileName="Enums/ProjectRole.cs" />
+      <File FileName="Enums/NotificationType.cs" />
+      <File FileName="Enums/InvitationStatus.cs" />
+      <File FileName="Enums/AIRequestType.cs" />
+      <File FileName="Data/AppDbContext.cs" />
+      <File FileName="Program.cs" />
+      <File FileName="Extentions/FileExtention.cs" Line="9" Column="30" />
+      <File FileName="Enums/ViewType.cs" />
+      <File FileName="Models/BaseEntity/Base.cs" />
+      <File FileName="DTOS/User/UserCreateDTO.cs" Line="5" Column="62" />
+      <File FileName="DTOS/User/UserGetDTO.cs" Line="11" Column="1" />
+      <File FileName="DTOS/User/UserUpdateDTO.cs" Line="10" Column="41" />
+      <File FileName="DTOS/AIRequest/AIRequestUpdateDTO.cs" Line="1" Column="1" />
+      <File FileName="DTOS/AIRequest/AIRequestGetDTO.cs" Line="1" Column="1" />
+      <File FileName="DTOS/AIResponse/AIResponseCreateDTO.cs" Line="1" Column="1" />
+      <File FileName="DTOS/AIResponse/AIResponseGetDTO.cs" Line="1" Column="1" />
+      <File FileName="DTOS/AIResponse/AIResponseUpdateDTO.cs" Line="1" Column="1" />
+      <File FileName="Controllers/AIRequestController.cs" Line="1" Column="1" />
+      <File FileName="Services/Interfaces/ICrudService.cs" Line="1" Column="1" />
+      <File FileName="Services/Implaments/CrudService.cs" Line="1" Column="1" />
+      <File FileName="Controllers/AIResponseController.cs" Line="1" Column="1" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="Coding" expanded="True">
+            <Node name="Coding" expanded="True">
+              <Node name="Models" selected="True" />
+              <Node name="Services" expanded="True">
+                <Node name="Implaments" expanded="True" />
+                <Node name="Interfaces" expanded="True" />
+              </Node>
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.ItemProperties.Coding.Application FirstBuild="True" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.ItemProperties.Coding PreferredExecutionTarget="/Applications/Google Chrome.app" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MultiItemStartupConfigurations />
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>
