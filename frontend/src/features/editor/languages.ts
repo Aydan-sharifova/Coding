@@ -1,0 +1,3 @@
+export type EditorLanguage = "javascript" | "typescript" | "javascriptreact" | "typescriptreact" | "html" | "css" | "json" | "csharp" | "python" | "java" | "sql" | "markdown" | "plaintext";
+const languages: Record<string, EditorLanguage> = { js: "javascript", mjs: "javascript", cjs: "javascript", ts: "typescript", jsx: "javascriptreact", tsx: "typescriptreact", html: "html", htm: "html", css: "css", scss: "css", json: "json", cs: "csharp", py: "python", java: "java", sql: "sql", md: "markdown", mdx: "markdown", txt: "plaintext" };
+export function detectLanguage(fileName: string): EditorLanguage { return languages[fileName.split('.').pop()?.toLowerCase() ?? ""] ?? "plaintext"; }

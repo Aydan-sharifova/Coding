@@ -20,7 +20,10 @@ async function getError(response: Response): Promise<ApiError> {
   const validationError = problem?.errors
     ? Object.values(problem.errors).flat()[0]
     : undefined;
-  return new ApiError(validationError ?? problem?.detail ?? problem?.title ?? "We couldn't complete your request.", response.status);
+  const gatewayMessage = [502, 503, 504].includes(response.status)
+    ? "The API is unavailable. Make sure the backend is running on port 5192."
+    : undefined;
+  return new ApiError(validationError ?? problem?.detail ?? problem?.title ?? gatewayMessage ?? "We couldn't complete your request.", response.status);
 }
 
 async function refreshSession(): Promise<AuthResponse> {
@@ -45,15 +48,20 @@ interface RequestOptions extends RequestInit {
 async function request<TResponse>(path: string, options: RequestOptions = {}): Promise<TResponse> {
   const { retryOnUnauthorized = true, headers, ...requestOptions } = options;
   const token = tokenStore.get();
-  const response = await fetch(`${API_URL}${path}`, {
-    ...requestOptions,
-    credentials: "include",
-    headers: {
-      ...(requestOptions.body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...requestOptions,
+      credentials: "include",
+      headers: {
+        ...(requestOptions.body ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
+      },
+    });
+  } catch {
+    throw new ApiError("Cannot connect to the API. Make sure the backend is running on port 5192.", 0);
+  }
 
   if (response.status === 401 && retryOnUnauthorized && !path.startsWith("/auth/")) {
     await refreshSession();

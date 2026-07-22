@@ -8,7 +8,7 @@ export const fileExplorerApi = {
   move: (id: string, parentId?: string) => apiClient.put<WorkspaceNode>(`/nodes/${id}/parent`, { parentId }),
   remove: (id: string) => apiClient.delete<void>(`/nodes/${id}`),
   content: (id: string) => apiClient.get<FileContent>(`/files/${id}/content`),
-  save: (id: string, content: string) => apiClient.put<FileContent>(`/files/${id}/content`, { content }),
+  save: (id: string, content: string, concurrencyToken: string) => apiClient.put<FileContent>(`/files/${id}/content`, { content, concurrencyToken }),
   versions: (id: string) => apiClient.get<FileVersion[]>(`/files/${id}/versions`),
   version: (nodeId: string, versionId: string) => apiClient.get<FileVersionDetails>(`/files/${nodeId}/versions/${versionId}`),
   compare: (nodeId: string, leftId: string, rightId: string) => apiClient.get<VersionComparison>(`/files/${nodeId}/versions/compare?leftId=${leftId}&rightId=${rightId}`),
