@@ -45,7 +45,7 @@ internal static class NodeOperations
         if (parent.ProjectId != projectId) throw new ConflictException("Nodes cannot move between projects.");
         if (parent.NodeType != WorkspaceNodeType.Folder) throw new ConflictException("A file cannot contain child nodes.");
     }
-    public static async Task<FileContentDto> SaveAsync(AppDbContext db, ICurrentUser user, WorkspaceNode node, string content, CancellationToken ct)
+    public static async Task<FileContentDto> SaveAsync(AppDbContext db, ICurrentUser user, WorkspaceNode node, string content, string concurrencyToken, CancellationToken ct)
     {
         if (node.NodeType != WorkspaceNodeType.File) throw new ConflictException("Only files contain editable content.");
         var strategy = db.Database.CreateExecutionStrategy();
@@ -53,11 +53,12 @@ internal static class NodeOperations
         {
             await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             var state = await db.FileContents.SingleAsync(x => x.NodeId == node.ID, ct); var hash = Hash(content);
-            if (state.ContentHash == hash) { await tx.CommitAsync(ct); return new FileContentDto(node.ID, await PathAsync(db, node, ct), state.Content, state.ContentHash, state.VersionNumber, state.UpdatedAt); }
-            state.Content = content; state.ContentHash = hash; state.VersionNumber++; state.UpdatedAt = DateTime.UtcNow; state.UpdatedById = user.UserId;
+            if (!string.Equals(state.ConcurrencyToken, concurrencyToken, StringComparison.Ordinal)) throw new ConflictException("The file was updated by another client. Reload before saving.");
+            if (state.ContentHash == hash) { await tx.CommitAsync(ct); return new FileContentDto(node.ID, await PathAsync(db, node, ct), state.Content, state.ContentHash, state.ConcurrencyToken, state.VersionNumber, state.UpdatedAt); }
+            state.Content = content; state.ContentHash = hash; state.ConcurrencyToken = Guid.NewGuid().ToString("N"); state.VersionNumber++; state.UpdatedAt = DateTime.UtcNow; state.UpdatedById = user.UserId;
             db.FileVersions.Add(new FileVersion { ID = Guid.NewGuid(), NodeId = node.ID, VersionNumber = state.VersionNumber, Content = content, ContentHash = hash, CreatedById = user.UserId, CreatAt = state.UpdatedAt });
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
-            return new FileContentDto(node.ID, await PathAsync(db, node, ct), content, hash, state.VersionNumber, state.UpdatedAt);
+            return new FileContentDto(node.ID, await PathAsync(db, node, ct), content, hash, state.ConcurrencyToken, state.VersionNumber, state.UpdatedAt);
         });
     }
 }
@@ -75,7 +76,7 @@ public sealed class CreateFileHandler(AppDbContext db, ICurrentUser user) : IReq
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct); var now = DateTime.UtcNow; var hash = NodeOperations.Hash(r.Content);
             var n = new WorkspaceNode { ID = Guid.NewGuid(), ProjectId = r.ProjectId, ParentId = r.ParentId, Name = r.Name.Trim(), NodeType = WorkspaceNodeType.File };
-            db.WorkspaceNodes.Add(n); db.FileContents.Add(new FileContent { Node = n, Content = r.Content, ContentHash = hash, VersionNumber = 1, UpdatedAt = now, UpdatedById = user.UserId }); db.FileVersions.Add(new FileVersion { ID = Guid.NewGuid(), Node = n, Content = r.Content, ContentHash = hash, VersionNumber = 1, CreatedById = user.UserId, CreatAt = now });
+            db.WorkspaceNodes.Add(n); db.FileContents.Add(new FileContent { Node = n, Content = r.Content, ContentHash = hash, ConcurrencyToken = Guid.NewGuid().ToString("N"), VersionNumber = 1, UpdatedAt = now, UpdatedById = user.UserId }); db.FileVersions.Add(new FileVersion { ID = Guid.NewGuid(), Node = n, Content = r.Content, ContentHash = hash, VersionNumber = 1, CreatedById = user.UserId, CreatAt = now });
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct); return await NodeOperations.MapAsync(db, n, ct);
         });
     }
@@ -94,10 +95,10 @@ public sealed class RestoreDeletedNodeHandler(AppDbContext db, ICurrentUser user
 { public async Task Handle(RestoreDeletedNodeCommand r, CancellationToken ct) { var n = await NodeOperations.NodeAsync(db, r.NodeId, ct, true); var role = await ProjectAccess.RequireMemberAsync(db, n.ProjectId, user.UserId, ct); ProjectAccess.RequireManager(role); await NodeOperations.EnsureParentAsync(db, n.ProjectId, n.ParentId, ct); await NodeOperations.EnsureUniqueAsync(db, n.ProjectId, n.ParentId, n.Name, n.ID, true, ct); foreach (var item in (await NodeOperations.DescendantsAsync(db, n.ID, true, ct)).Prepend(n)) { item.IsDeleted = false; item.DeletedAt = null; item.UpdateAt = DateTime.UtcNow; } await db.SaveChangesAsync(ct); } }
 
 public sealed class SaveFileContentHandler(AppDbContext db, ICurrentUser user) : IRequestHandler<SaveFileContentCommand, FileContentDto>
-{ public async Task<FileContentDto> Handle(SaveFileContentCommand r, CancellationToken ct) { var n = await NodeOperations.NodeAsync(db, r.NodeId, ct); await ProjectAccess.RequireMemberAsync(db, n.ProjectId, user.UserId, ct); return await NodeOperations.SaveAsync(db, user, n, r.Content, ct); } }
+{ public async Task<FileContentDto> Handle(SaveFileContentCommand r, CancellationToken ct) { var n = await NodeOperations.NodeAsync(db, r.NodeId, ct); await ProjectAccess.RequireMemberAsync(db, n.ProjectId, user.UserId, ct); return await NodeOperations.SaveAsync(db, user, n, r.Content, r.ConcurrencyToken, ct); } }
 
 public sealed class RestoreFileVersionHandler(AppDbContext db, ICurrentUser user) : IRequestHandler<RestoreFileVersionCommand, FileContentDto>
-{ public async Task<FileContentDto> Handle(RestoreFileVersionCommand r, CancellationToken ct) { var n = await NodeOperations.NodeAsync(db, r.NodeId, ct); await ProjectAccess.RequireMemberAsync(db, n.ProjectId, user.UserId, ct); var version = await db.FileVersions.AsNoTracking().SingleOrDefaultAsync(x => x.ID == r.VersionId && x.NodeId == n.ID, ct) ?? throw new NotFoundException("File version not found."); return await NodeOperations.SaveAsync(db, user, n, version.Content, ct); } }
+{ public async Task<FileContentDto> Handle(RestoreFileVersionCommand r, CancellationToken ct) { var n = await NodeOperations.NodeAsync(db, r.NodeId, ct); await ProjectAccess.RequireMemberAsync(db, n.ProjectId, user.UserId, ct); var version = await db.FileVersions.AsNoTracking().SingleOrDefaultAsync(x => x.ID == r.VersionId && x.NodeId == n.ID, ct) ?? throw new NotFoundException("File version not found."); var token = await db.FileContents.Where(x => x.NodeId == n.ID).Select(x => x.ConcurrencyToken).SingleAsync(ct); return await NodeOperations.SaveAsync(db, user, n, version.Content, token, ct); } }
 
 public sealed class GetProjectFileTreeHandler(AppDbContext db, ICurrentUser user) : IRequestHandler<GetProjectFileTreeQuery, IReadOnlyList<WorkspaceNodeDto>>
 { public async Task<IReadOnlyList<WorkspaceNodeDto>> Handle(GetProjectFileTreeQuery r, CancellationToken ct) { await ProjectAccess.RequireMemberAsync(db, r.ProjectId, user.UserId, ct); var nodes = await db.WorkspaceNodes.AsNoTracking().Where(n => n.ProjectId == r.ProjectId).OrderBy(n => n.NodeType).ThenBy(n => n.Name).ToListAsync(ct); var result = new List<WorkspaceNodeDto>(); foreach (var n in nodes) result.Add(await NodeOperations.MapAsync(db, n, ct)); return result; } }
@@ -106,7 +107,7 @@ public sealed class GetFolderChildrenHandler(AppDbContext db, ICurrentUser user)
 { public async Task<IReadOnlyList<WorkspaceNodeDto>> Handle(GetFolderChildrenQuery r, CancellationToken ct) { await ProjectAccess.RequireMemberAsync(db, r.ProjectId, user.UserId, ct); if (r.ParentId.HasValue) await NodeOperations.EnsureParentAsync(db, r.ProjectId, r.ParentId, ct); var nodes = await db.WorkspaceNodes.AsNoTracking().Where(n => n.ProjectId == r.ProjectId && n.ParentId == r.ParentId).OrderBy(n => n.NodeType).ThenBy(n => n.Name).ToListAsync(ct); var result = new List<WorkspaceNodeDto>(); foreach (var n in nodes) result.Add(await NodeOperations.MapAsync(db, n, ct)); return result; } }
 
 public sealed class GetFileContentHandler(AppDbContext db, ICurrentUser user) : IRequestHandler<GetFileContentQuery, FileContentDto>
-{ public async Task<FileContentDto> Handle(GetFileContentQuery r, CancellationToken ct) { var n = await NodeOperations.NodeAsync(db, r.NodeId, ct); await ProjectAccess.RequireMemberAsync(db, n.ProjectId, user.UserId, ct); var c = await db.FileContents.AsNoTracking().SingleOrDefaultAsync(x => x.NodeId == n.ID, ct) ?? throw new NotFoundException("File content not found."); return new(n.ID, await NodeOperations.PathAsync(db, n, ct), c.Content, c.ContentHash, c.VersionNumber, c.UpdatedAt); } }
+{ public async Task<FileContentDto> Handle(GetFileContentQuery r, CancellationToken ct) { var n = await NodeOperations.NodeAsync(db, r.NodeId, ct); await ProjectAccess.RequireMemberAsync(db, n.ProjectId, user.UserId, ct); var c = await db.FileContents.AsNoTracking().SingleOrDefaultAsync(x => x.NodeId == n.ID, ct) ?? throw new NotFoundException("File content not found."); return new(n.ID, await NodeOperations.PathAsync(db, n, ct), c.Content, c.ContentHash, c.ConcurrencyToken, c.VersionNumber, c.UpdatedAt); } }
 
 public sealed class GetFileVersionsHandler(AppDbContext db, ICurrentUser user) : IRequestHandler<GetFileVersionsQuery, IReadOnlyList<FileVersionDto>>
 { public async Task<IReadOnlyList<FileVersionDto>> Handle(GetFileVersionsQuery r, CancellationToken ct) { var n = await NodeOperations.NodeAsync(db, r.NodeId, ct); await ProjectAccess.RequireMemberAsync(db, n.ProjectId, user.UserId, ct); return await db.FileVersions.AsNoTracking().Where(x => x.NodeId == r.NodeId).OrderByDescending(x => x.VersionNumber).Select(x => new FileVersionDto(x.ID, x.NodeId, x.VersionNumber, x.ContentHash, x.CreatedById, x.CreatedBy.FirstName + " " + x.CreatedBy.LastName, x.CreatAt)).ToListAsync(ct); } }

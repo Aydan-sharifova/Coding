@@ -27,6 +27,7 @@ public sealed class FileContentConfiguration : IEntityTypeConfiguration<FileCont
         builder.HasQueryFilter(content => !content.Node.IsDeleted && !content.Node.Project.IsDeleted);
         builder.HasKey(content => content.NodeId);
         builder.Property(content => content.ContentHash).HasMaxLength(64);
+        builder.Property(content => content.ConcurrencyToken).HasMaxLength(32).IsRequired().IsConcurrencyToken();
         builder.HasOne(content => content.Node).WithOne(node => node.FileContent).HasForeignKey<FileContent>(content => content.NodeId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(content => content.UpdatedBy).WithMany().HasForeignKey(content => content.UpdatedById).OnDelete(DeleteBehavior.Restrict);
     }

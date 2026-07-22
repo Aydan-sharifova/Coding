@@ -27,7 +27,7 @@ public sealed class FileExplorerController(ISender sender) : ControllerBase
     [HttpGet("files/{nodeId:guid}/content")]
     public Task<FileContentDto> Content(Guid nodeId, CancellationToken ct) => sender.Send(new GetFileContentQuery(nodeId), ct);
     [HttpPut("files/{nodeId:guid}/content")]
-    public Task<FileContentDto> Save(Guid nodeId, SaveContentRequest request, CancellationToken ct) => sender.Send(new SaveFileContentCommand(nodeId, request.Content), ct);
+    public Task<FileContentDto> Save(Guid nodeId, SaveContentRequest request, CancellationToken ct) => sender.Send(new SaveFileContentCommand(nodeId, request.Content, request.ConcurrencyToken), ct);
     [HttpGet("files/{nodeId:guid}/versions")]
     public Task<IReadOnlyList<FileVersionDto>> Versions(Guid nodeId, CancellationToken ct) => sender.Send(new GetFileVersionsQuery(nodeId), ct);
     [HttpGet("files/{nodeId:guid}/versions/{versionId:guid}")]
@@ -42,4 +42,4 @@ public sealed record CreateNodeRequest(Guid? ParentId, string Name);
 public sealed record CreateFileRequest(Guid? ParentId, string Name, string? Content);
 public sealed record RenameNodeRequest(string Name);
 public sealed record MoveNodeRequest(Guid? ParentId);
-public sealed record SaveContentRequest(string Content);
+public sealed record SaveContentRequest(string Content, string ConcurrencyToken);

@@ -56,7 +56,13 @@ try
         });
     }
 
-    app.UseHttpsRedirection();
+    // Local Vite/Nginx development proxies use the HTTP launch endpoint. Redirecting
+    // proxied API calls to the HTTPS development certificate breaks browser requests.
+    // Production TLS is still enforced here and by the reverse proxy/HSTS.
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHttpsRedirection();
+    }
     app.UseCors("Client");
     app.UseRateLimiter();
     app.UseAuthentication();
