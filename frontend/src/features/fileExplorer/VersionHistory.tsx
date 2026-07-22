@@ -1,0 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { ConfirmDialog, Dialog } from "../../components/ui/Dialog";
+import { fileExplorerApi } from "./api";
+import type { FileVersion, VersionComparison } from "./types";
+
+export function VersionHistory({ nodeId, refreshKey, onRestore }: { nodeId: string; refreshKey: number; onRestore: () => void }) {
+  const versions = useQuery({ queryKey: ["file-versions", nodeId, refreshKey], queryFn: () => fileExplorerApi.versions(nodeId) }); const [restore, setRestore] = useState<FileVersion>(); const [compareIds, setCompareIds] = useState<string[]>([]); const [comparison, setComparison] = useState<VersionComparison>();
+  const toggleCompare = async (id: string) => { const next = compareIds.includes(id) ? compareIds.filter((x) => x !== id) : [...compareIds.slice(-1), id]; setCompareIds(next); if (next.length === 2) setComparison(await fileExplorerApi.compare(nodeId, next[0], next[1])); };
+  return <aside className="history-panel"><header><h2>History</h2><span>{versions.data?.length ?? 0} versions</span></header><div className="version-list">{versions.isLoading ? <div className="tree-empty">Loading history…</div> : versions.data?.map((version) => <article key={version.id}><span className="timeline-dot" /><div><strong>Version {version.versionNumber}</strong><p>{version.createdBy}</p><time>{new Date(version.createdAt).toLocaleString()}</time></div><div><button onClick={() => toggleCompare(version.id)} className={compareIds.includes(version.id) ? "active" : ""}>Compare</button><button onClick={() => setRestore(version)}>Restore</button></div></article>)}</div><ConfirmDialog open={Boolean(restore)} title={`Restore version ${restore?.versionNumber}?`} description="Restoring creates a new latest version; existing history remains intact." confirmLabel="Restore version" onClose={() => setRestore(undefined)} onConfirm={async () => { if (!restore) return; await fileExplorerApi.restoreVersion(nodeId, restore.id); setRestore(undefined); onRestore(); }} /><Dialog open={Boolean(comparison)} title={`Compare v${comparison?.left.versionNumber} ↔ v${comparison?.right.versionNumber}`} onClose={() => setComparison(undefined)}><div className="compare-grid"><pre>{comparison?.left.content}</pre><pre>{comparison?.right.content}</pre></div></Dialog></aside>;
+}
