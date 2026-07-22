@@ -63,12 +63,13 @@ namespace Coding.Migrations
 
             migrationBuilder.Sql("""
                 UPDATE "Projects" AS project
-                SET "OwnerId" = member."UserId"
-                FROM LATERAL (
-                    SELECT "UserId" FROM "ProjectMembers"
-                    WHERE "ProjectId" = project."ID"
-                    ORDER BY "JoinedAt" LIMIT 1
-                ) AS member;
+                SET "OwnerId" = (
+                    SELECT member."UserId"
+                    FROM "ProjectMembers" AS member
+                    WHERE member."ProjectId" = project."ID"
+                    ORDER BY member."JoinedAt", member."ID"
+                    LIMIT 1
+                );
                 """);
 
             migrationBuilder.Sql("""

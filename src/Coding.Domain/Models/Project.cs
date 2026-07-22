@@ -25,6 +25,8 @@ namespace Coding.Models
 
         public ICollection<ProjectInvitation> Invitations { get; set; } = [];
 
+        public ICollection<WorkspaceNode> WorkspaceNodes { get; set; } = [];
+
         public ICollection<Folder> Folders { get; set; } = [];
 
         public ICollection<GitCommit> Commits { get; set; } = [];

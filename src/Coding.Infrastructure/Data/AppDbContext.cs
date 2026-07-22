@@ -30,6 +30,10 @@ namespace Coding.Data
 
         public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
 
+        public DbSet<WorkspaceNode> WorkspaceNodes => Set<WorkspaceNode>();
+        public DbSet<FileContent> FileContents => Set<FileContent>();
+        public DbSet<FileVersion> FileVersions => Set<FileVersion>();
+
         public DbSet<Folder> Folders => Set<Folder>();
 
         public DbSet<FileItem> FileItems => Set<FileItem>();

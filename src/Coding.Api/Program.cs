@@ -80,4 +80,8 @@ finally
     Log.CloseAndFlush();
 }
 
-public partial class Program;
+public partial class Program
+{
+    // EF CLI falls back to the explicit AppDbContextFactory without starting external services.
+    public static object CreateHostBuilder(string[] args) => new();
+}
