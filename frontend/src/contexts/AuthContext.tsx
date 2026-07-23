@@ -1,6 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { authService } from "../services/authService";
 import type { AuthResponse, LoginPayload, RegisterPayload } from "../types/auth";
+import { signalRService } from "../features/collaboration/signalRService";
 
 interface AuthContextValue {
   session: AuthResponse | null;
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   const logout = useCallback(async () => {
+    await signalRService.disconnect();
     await authService.logout();
     setSession(null);
   }, []);
