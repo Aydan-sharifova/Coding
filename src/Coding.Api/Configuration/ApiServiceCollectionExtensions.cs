@@ -11,6 +11,7 @@ using Coding.Infrastructure.Projects;
 using FluentValidation;
 using MediatR;
 using System.Text.Json.Serialization;
+using Coding.Api.Collaboration;
 
 namespace Coding.Api.Configuration;
 
@@ -27,6 +28,8 @@ public static class ApiServiceCollectionExtensions
         services.AddHttpClient();
         services.AddMemoryCache();
         services.AddHttpContextAccessor();
+        services.AddSingleton<ICollaborationPresenceTracker, CollaborationPresenceTracker>();
+        services.AddHostedService<StaleConnectionCleanupService>();
         services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddMediatR(configuration => configuration.RegisterServicesFromAssemblies(
             typeof(CreateProjectCommand).Assembly,
@@ -56,6 +59,16 @@ public static class ApiServiceCollectionExtensions
         });
 
         services.AddJwtAuthentication(configuration);
+        var signalR = services.AddSignalR(options =>
+        {
+            options.EnableDetailedErrors = false;
+            options.MaximumReceiveMessageSize = 128 * 1024;
+            options.ClientTimeoutInterval = TimeSpan.FromSeconds(45);
+            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+        });
+        var signalRRedis = configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrWhiteSpace(signalRRedis))
+            signalR.AddStackExchangeRedis(signalRRedis);
         services.AddSwaggerDocumentation();
         services.AddRateLimiter(options =>
         {
@@ -114,6 +127,17 @@ public static class ApiServiceCollectionExtensions
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
                     ClockSkew = TimeSpan.FromMinutes(1)
                 };
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var token = context.Request.Query["access_token"];
+                        if (!string.IsNullOrWhiteSpace(token) &&
+                            context.HttpContext.Request.Path.StartsWithSegments("/hubs/collaboration"))
+                            context.Token = token;
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
         services.AddAuthorization();
@@ -147,10 +171,7 @@ public static class ApiServiceCollectionExtensions
             };
 
             options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, scheme);
-            options.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                [scheme] = Array.Empty<string>()
-            });
+            options.OperationFilter<SwaggerAuthorizationOperationFilter>();
         });
 
         return services;

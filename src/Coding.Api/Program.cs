@@ -4,6 +4,7 @@ using Coding.Data;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Coding.Api.Collaboration;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -70,6 +71,7 @@ try
 
     app.MapHealthChecks("/health");
     app.MapControllers();
+    app.MapHub<CollaborationHub>("/hubs/collaboration");
 
     if (!EF.IsDesignTime)
     {

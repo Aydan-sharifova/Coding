@@ -21,6 +21,8 @@ public sealed class AuthenticationController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("register")]
+    [EndpointSummary("Register a new user account")]
+    [EndpointDescription("Public account creation endpoint. Creates the user, assigns the Guest role, issues JWT/refresh tokens, and starts email verification.")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<IActionResult> Register(
         RegisterRequest request,
@@ -33,6 +35,7 @@ public sealed class AuthenticationController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("login")]
+    [EndpointSummary("Sign in and receive an access token")]
     public async Task<IActionResult> Login(LoginRequest request, CancellationToken cancellationToken)
     {
         var response = await authenticationService.LoginAsync(request, cancellationToken);
