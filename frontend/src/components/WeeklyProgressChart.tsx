@@ -4,7 +4,7 @@ import { useTheme } from "../hooks/useTheme";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
-export function WeeklyProgressChart() {
+export function WeeklyProgressChart({ points }: { points: Array<{ date: string; contributions: number }> }) {
   const { theme } = useTheme();
   const grid = theme === "dark" ? "rgba(148, 163, 184, .12)" : "rgba(100, 116, 139, .1)";
   const text = theme === "dark" ? "#94a3b8" : "#7b8497";
@@ -12,8 +12,8 @@ export function WeeklyProgressChart() {
     <div className="chart-wrap">
       <Line
         data={{
-          labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-          datasets: [{ label: "Commits", data: [8, 13, 10, 18, 15, 23, 20], borderColor: "#6c5ce7", backgroundColor: "rgba(108, 92, 231, .12)", pointBackgroundColor: "#6c5ce7", pointBorderColor: theme === "dark" ? "#171b29" : "#fff", pointBorderWidth: 3, pointRadius: 4, tension: .4, fill: true }],
+          labels: points.map((point) => new Date(`${point.date}T00:00:00`).toLocaleDateString(undefined, { weekday: "short" })),
+          datasets: [{ label: "Activity", data: points.map((point) => point.contributions), borderColor: "#6c5ce7", backgroundColor: "rgba(108, 92, 231, .12)", pointBackgroundColor: "#6c5ce7", pointBorderColor: theme === "dark" ? "#171b29" : "#fff", pointBorderWidth: 3, pointRadius: 4, tension: .4, fill: true }],
         }}
         options={{
           responsive: true,

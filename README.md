@@ -39,3 +39,7 @@ dotnet ef database update \
 ```
 
 Secrets must be supplied through environment variables or a production secret manager. Do not commit `.env`.
+
+## SMTP email delivery
+
+SMTP is disabled by default, so development runs log that an email was not delivered without exposing verification or reset tokens. To enable delivery, set the `SMTP_*` values from `.env.example`. Credentials should come from environment variables or a secret manager; never place production passwords in `appsettings.json`.
