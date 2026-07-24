@@ -7,6 +7,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Coding.Application.Features.Notifications;
 using Coding.Infrastructure.Notifications;
+using Coding.Application.Features.Activities;
+using Coding.Infrastructure.Activities;
 
 namespace Coding.Infrastructure;
 
@@ -40,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailSender, LoggingEmailSender>();
         services.AddScoped<IdentityPasswordService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IActivityLogger, ActivityLogger>();
 
         return services;
     }

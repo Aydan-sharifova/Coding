@@ -41,6 +41,7 @@ public static class ApiServiceCollectionExtensions
             typeof(CreateProjectHandler).Assembly));
         services.AddValidatorsFromAssemblyContaining<CreateProjectValidator>();
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ActivityLoggingBehavior<,>));
 
         services.AddCors(options =>
         {

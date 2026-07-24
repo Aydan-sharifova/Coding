@@ -45,6 +45,10 @@ namespace Coding.Data
         public DbSet<ConversationParticipant> ConversationParticipants => Set<ConversationParticipant>();
         public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
         public DbSet<MessageReadReceipt> MessageReadReceipts => Set<MessageReadReceipt>();
+        public DbSet<ProjectTask> ProjectTasks => Set<ProjectTask>();
+        public DbSet<TaskAssignee> TaskAssignees => Set<TaskAssignee>();
+        public DbSet<TaskComment> TaskComments => Set<TaskComment>();
+        public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<UserNotificationPreference> UserNotificationPreferences => Set<UserNotificationPreference>();

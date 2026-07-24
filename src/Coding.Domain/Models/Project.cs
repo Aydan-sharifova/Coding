@@ -30,5 +30,6 @@ namespace Coding.Models
         public ICollection<Folder> Folders { get; set; } = [];
 
         public ICollection<GitCommit> Commits { get; set; } = [];
+        public ICollection<ProjectTask> Tasks { get; set; } = [];
     }
 }

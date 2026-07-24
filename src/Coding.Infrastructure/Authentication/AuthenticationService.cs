@@ -11,6 +11,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Coding.Application.Features.Activities;
 
 namespace Coding.Infrastructure.Authentication;
 
@@ -18,7 +19,8 @@ public sealed class AuthenticationService(
      AppDbContext context,
     IEmailSender emailSender,
     IConfiguration configuration,
-    IdentityPasswordService passwordService) : IAuthenticationService
+    IdentityPasswordService passwordService,
+    IActivityLogger activityLogger) : IAuthenticationService
 {
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
     private static readonly TimeSpan AccountTokenLifetime = TimeSpan.FromHours(1);
@@ -89,7 +91,9 @@ public sealed class AuthenticationService(
 
         user.LastSeen = DateTime.UtcNow;
         var roles = user.UserRoles.Select(item => item.Role.Name).Distinct().ToArray();
-        return await IssueTokensAsync(user, roles, cancellationToken);
+        var response = await IssueTokensAsync(user, roles, cancellationToken);
+        await activityLogger.LogAsync(new(user.ID, null, "Login", nameof(User), user.ID, "User signed in."), cancellationToken);
+        return response;
     }
 
     public async Task<AuthResponse> RefreshAsync(
@@ -127,6 +131,7 @@ public sealed class AuthenticationService(
         token.IsRevoked = true;
         token.UpdateAt = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
+        await activityLogger.LogAsync(new(token.UserId, null, "Logout", nameof(User), token.UserId, "User signed out."), cancellationToken);
     }
 
     public async Task RequestEmailVerificationAsync(
