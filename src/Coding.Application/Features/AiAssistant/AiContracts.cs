@@ -22,6 +22,7 @@ public sealed record AiRequest(
     string ProgrammingLanguage,
     AiAssistantAction Action,
     IReadOnlyList<AiProviderMessage> History);
+
 public sealed record AiStreamChunk(string Content, bool IsCompleted = false, int? InputTokens = null, int? OutputTokens = null, string? FinishReason = null, Guid? ConversationId = null);
 public sealed record AiConversationDto(Guid Id, Guid ProjectId, string Title, DateTime CreatedAt, DateTime UpdatedAt);
 public sealed record AiMessageDto(Guid Id, AiMessageRole Role, string Content, AiAssistantAction? Action, Guid? FileId, DateTime CreatedAt);
