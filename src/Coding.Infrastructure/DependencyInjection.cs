@@ -9,6 +9,8 @@ using Coding.Application.Features.Notifications;
 using Coding.Infrastructure.Notifications;
 using Coding.Application.Features.Activities;
 using Coding.Infrastructure.Activities;
+using Coding.Application.Features.AiAssistant;
+using Coding.Infrastructure.AiAssistant;
 
 namespace Coding.Infrastructure;
 
@@ -43,6 +45,20 @@ public static class DependencyInjection
         services.AddScoped<IdentityPasswordService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IActivityLogger, ActivityLogger>();
+        services.AddOptions<AiOptions>().Bind(configuration.GetSection(AiOptions.SectionName)).Validate(x => !string.IsNullOrWhiteSpace(x.Provider), "An AI provider name is required.").ValidateOnStart();
+        services.AddScoped<IAiContextBuilder, AiContextBuilder>();
+        services.AddScoped<IAiPromptTemplateService, AiPromptTemplateService>();
+        services.AddScoped<IAiUsageTracker, AiUsageTracker>();
+        services.AddScoped<IAiConversationService, AiConversationService>();
+        services.AddScoped<DevelopmentAiProvider>();
+        services.AddScoped<OpenAiProvider>();
+        services.AddScoped<IAiProvider>(provider =>
+        {
+            var settings = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiOptions>>().Value;
+            return settings.Provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase)
+                ? provider.GetRequiredService<OpenAiProvider>()
+                : provider.GetRequiredService<DevelopmentAiProvider>();
+        });
 
         return services;
     }

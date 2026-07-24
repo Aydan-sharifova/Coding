@@ -49,6 +49,9 @@ namespace Coding.Data
         public DbSet<TaskAssignee> TaskAssignees => Set<TaskAssignee>();
         public DbSet<TaskComment> TaskComments => Set<TaskComment>();
         public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+        public DbSet<AiConversation> AiConversations => Set<AiConversation>();
+        public DbSet<AiMessage> AiMessages => Set<AiMessage>();
+        public DbSet<AiUsageRecord> AiUsageRecords => Set<AiUsageRecord>();
 
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<UserNotificationPreference> UserNotificationPreferences => Set<UserNotificationPreference>();
