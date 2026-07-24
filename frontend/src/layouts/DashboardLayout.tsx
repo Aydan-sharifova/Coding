@@ -3,10 +3,12 @@ import { NavLink, Outlet } from "react-router-dom";
 import { Icon, type IconName } from "../components/Icon";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../hooks/useTheme";
+import { NotificationBell } from "../features/notifications/NotificationBell";
 
 const navItems: Array<{ label: string; path: string; icon: IconName }> = [
   { label: "Overview", path: "/dashboard", icon: "dashboard" },
   { label: "Projects", path: "/projects", icon: "folder" },
+  { label: "Chat", path: "/chat", icon: "team" },
   { label: "Activity", path: "/activity", icon: "activity" },
   { label: "Team", path: "/team", icon: "team" },
 ];
@@ -39,7 +41,7 @@ export function DashboardLayout() {
           <label className="dashboard-search"><Icon name="search" /><input type="search" placeholder="Search projects, activity..." aria-label="Search" /><kbd>⌘ K</kbd></label>
           <div className="topbar-actions">
             <button className="icon-button" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}><Icon name={theme === "dark" ? "sun" : "moon"} /></button>
-            <button className="icon-button notification-button" aria-label="Notifications"><Icon name="bell" /><span /></button>
+            <NotificationBell />
             <button className="create-button"><Icon name="plus" /> New project</button>
           </div>
         </header>

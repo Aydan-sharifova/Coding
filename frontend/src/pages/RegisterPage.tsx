@@ -11,7 +11,7 @@ const registerSchema = z.object({
   lastName: z.string().trim().min(2, "Use at least 2 characters.").max(50),
   userName: z.string().trim().min(3, "Use at least 3 characters.").max(50).regex(/^[a-zA-Z0-9._-]+$/, "Use letters, numbers, dots, dashes, or underscores."),
   email: z.string().trim().email("Enter a valid email address."),
-  password: z.string().min(12, "Use at least 12 characters.").max(128).regex(/[A-Z]/, "Add an uppercase letter.").regex(/[a-z]/, "Add a lowercase letter.").regex(/[0-9]/, "Add a number."),
+  password: z.string().min(12, "Use at least 12 characters.").max(128).regex(/[A-Z]/, "Add an uppercase letter.").regex(/[a-z]/, "Add a lowercase letter.").regex(/[0-9]/, "Add a number.").regex(/[^A-Za-z0-9]/, "Add a special character."),
   confirmPassword: z.string(),
 }).refine((values) => values.password === values.confirmPassword, {
   message: "Passwords do not match.",
@@ -60,6 +60,7 @@ export function RegisterPage() {
           <FormField label="Password" type="password" autoComplete="new-password" error={errors.password?.message} {...register("password")} />
           <FormField label="Confirm password" type="password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
         </div>
+        <p className="password-hint">Use 12+ characters with uppercase, lowercase, number, and special character.</p>
         <button className="primary-button" type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Creating account…" : "Create account"}
         </button>

@@ -12,18 +12,33 @@ export class ApiError extends Error {
 }
 
 async function getError(response: Response): Promise<ApiError> {
-  const problem = await response.json().catch(() => null) as {
+  const responseBody = await response.text().catch(() => "");
+  type ProblemResponse = {
     title?: string;
     detail?: string;
     errors?: Record<string, string[]>;
-  } | null;
+  };
+  let problem: ProblemResponse | null = null;
+  try {
+    problem = responseBody ? JSON.parse(responseBody) as ProblemResponse : null;
+  } catch {
+    problem = null;
+  }
   const validationError = problem?.errors
     ? Object.values(problem.errors).flat()[0]
     : undefined;
   const gatewayMessage = [502, 503, 504].includes(response.status)
     ? "The API is unavailable. Make sure the backend is running on port 5192."
     : undefined;
-  return new ApiError(validationError ?? problem?.detail ?? problem?.title ?? gatewayMessage ?? "We couldn't complete your request.", response.status);
+  const safeServerText = !problem && responseBody && responseBody.length <= 300 && !responseBody.includes("<")
+    ? responseBody
+    : undefined;
+  const statusMessage = response.status === 409
+    ? "An account with that email address or username already exists."
+    : response.status === 429
+      ? "Too many attempts. Please wait a minute and try again."
+      : undefined;
+  return new ApiError(validationError ?? problem?.detail ?? problem?.title ?? safeServerText ?? gatewayMessage ?? statusMessage ?? `Request failed (${response.status}). Please try again.`, response.status);
 }
 
 async function refreshSession(): Promise<AuthResponse> {
