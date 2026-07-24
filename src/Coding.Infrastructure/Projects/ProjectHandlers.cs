@@ -9,6 +9,7 @@ using Coding.Models;
 using MediatR;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Coding.Application.Features.Notifications;
 
 namespace Coding.Infrastructure.Projects;
 
@@ -35,14 +36,19 @@ public sealed class CreateProjectHandler(AppDbContext context, ICurrentUser curr
 {
     public async Task<ProjectDetails> Handle(CreateProjectCommand request, CancellationToken cancellationToken)
     {
-        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-        var now = DateTime.UtcNow;
-        var project = new Project { ID = Guid.NewGuid(), Name = request.Name.Trim(), Description = request.Description?.Trim(), DefaultLanguage = request.DefaultLanguage.Trim(), IsPublic = request.IsPublic, OwnerId = currentUser.UserId, CreatedAt = now, CreatAt = now };
-        project.Members.Add(new ProjectMember { ID = Guid.NewGuid(), Project = project, UserId = currentUser.UserId, Role = ProjectRole.Owner, JoinedAt = now, CreatAt = now });
-        context.Projects.Add(project);
-        await context.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return new(project.ID, project.Name, project.Description, project.DefaultLanguage, project.IsPublic, project.OwnerId, ProjectRole.Owner, project.CreatedAt, project.UpdateAt);
+        var strategy = context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            var now = DateTime.UtcNow;
+            var project = new Project { ID = Guid.NewGuid(), Name = request.Name.Trim(), Description = request.Description?.Trim(), DefaultLanguage = request.DefaultLanguage.Trim(), IsPublic = request.IsPublic, OwnerId = currentUser.UserId, CreatedAt = now, CreatAt = now };
+            project.Members.Add(new ProjectMember { ID = Guid.NewGuid(), Project = project, UserId = currentUser.UserId, Role = ProjectRole.Owner, JoinedAt = now, CreatAt = now });
+            context.Conversations.Add(new Conversation { ID = Guid.NewGuid(), Type = ConversationType.ProjectChannel, Project = project, Name = project.Name, CreatedAt = now, UpdatedAt = now, Participants = [new ConversationParticipant { ID = Guid.NewGuid(), UserId = currentUser.UserId, JoinedAt = now }] });
+            context.Projects.Add(project);
+            await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return new ProjectDetails(project.ID, project.Name, project.Description, project.DefaultLanguage, project.IsPublic, project.OwnerId, ProjectRole.Owner, project.CreatedAt, project.UpdateAt);
+        });
     }
 }
 
@@ -54,6 +60,8 @@ public sealed class UpdateProjectHandler(AppDbContext context, ICurrentUser curr
         ProjectAccess.RequireManager(role);
         var project = await context.Projects.SingleOrDefaultAsync(item => item.ID == request.ProjectId, cancellationToken) ?? throw new NotFoundException("Project not found.");
         project.Name = request.Name.Trim(); project.Description = request.Description?.Trim(); project.DefaultLanguage = request.DefaultLanguage.Trim(); project.IsPublic = request.IsPublic; project.UpdateAt = DateTime.UtcNow;
+        var channel = await context.Conversations.SingleOrDefaultAsync(item => item.ProjectId == request.ProjectId, cancellationToken);
+        if (channel is not null) { channel.Name = project.Name; channel.UpdatedAt = project.UpdateAt.Value; }
         await context.SaveChangesAsync(cancellationToken);
         return new(project.ID, project.Name, project.Description, project.DefaultLanguage, project.IsPublic, project.OwnerId, role, project.CreatedAt, project.UpdateAt);
     }
@@ -71,7 +79,7 @@ public sealed class DeleteProjectHandler(AppDbContext context, ICurrentUser curr
     }
 }
 
-public sealed class InviteProjectMemberHandler(AppDbContext context, ICurrentUser currentUser) : IRequestHandler<InviteProjectMemberCommand, CreatedInvitation>
+public sealed class InviteProjectMemberHandler(AppDbContext context, ICurrentUser currentUser, INotificationService notifications) : IRequestHandler<InviteProjectMemberCommand, CreatedInvitation>
 {
     public async Task<CreatedInvitation> Handle(InviteProjectMemberCommand request, CancellationToken cancellationToken)
     {
@@ -89,6 +97,11 @@ public sealed class InviteProjectMemberHandler(AppDbContext context, ICurrentUse
         var invitation = new ProjectInvitation { ID = Guid.NewGuid(), ProjectId = request.ProjectId, Email = email, Role = request.Role, TokenHash = ProjectAccess.HashToken(token), Status = InvitationStatus.Pending, ExpiresAt = DateTime.UtcNow.AddDays(7), InvitedById = currentUser.UserId };
         context.ProjectInvitations.Add(invitation);
         await context.SaveChangesAsync(cancellationToken);
+        if (existingUserId.HasValue && existingUserId.Value != currentUser.UserId)
+        {
+            var projectName = await context.Projects.Where(project => project.ID == request.ProjectId).Select(project => project.Name).SingleAsync(cancellationToken);
+            await notifications.CreateAsync(new CreateNotificationRequest(existingUserId.Value, NotificationType.Invitation, "Project invitation", $"You were invited to {projectName}.", invitation.ID, nameof(ProjectInvitation)), cancellationToken);
+        }
         return new(invitation.ID, token, invitation.ExpiresAt);
     }
 }
@@ -97,17 +110,23 @@ public sealed class AcceptProjectInvitationHandler(AppDbContext context, ICurren
 {
     public async Task<Guid> Handle(AcceptProjectInvitationCommand request, CancellationToken cancellationToken)
     {
-        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-        var hash = ProjectAccess.HashToken(request.Token);
-        var invitation = await context.ProjectInvitations.Include(item => item.Project).SingleOrDefaultAsync(item => item.TokenHash == hash, cancellationToken) ?? throw new NotFoundException("Invitation not found.");
-        if (invitation.Status != InvitationStatus.Pending || invitation.ExpiresAt <= DateTime.UtcNow) throw new ConflictException("This invitation is no longer active.");
-        if (!string.Equals(invitation.Email, currentUser.Email, StringComparison.OrdinalIgnoreCase)) throw new ForbiddenException("This invitation belongs to another email address.");
-        if (await context.ProjectMembers.AnyAsync(member => member.ProjectId == invitation.ProjectId && member.UserId == currentUser.UserId, cancellationToken)) throw new ConflictException("You are already a project member.");
-        context.ProjectMembers.Add(new ProjectMember { ID = Guid.NewGuid(), ProjectId = invitation.ProjectId, UserId = currentUser.UserId, Role = invitation.Role, JoinedAt = DateTime.UtcNow });
-        invitation.Status = InvitationStatus.Accepted; invitation.RespondedAt = DateTime.UtcNow;
-        await context.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return invitation.ProjectId;
+        var strategy = context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            var hash = ProjectAccess.HashToken(request.Token);
+            var invitation = await context.ProjectInvitations.Include(item => item.Project).SingleOrDefaultAsync(item => item.TokenHash == hash, cancellationToken) ?? throw new NotFoundException("Invitation not found.");
+            if (invitation.Status != InvitationStatus.Pending || invitation.ExpiresAt <= DateTime.UtcNow) throw new ConflictException("This invitation is no longer active.");
+            if (!string.Equals(invitation.Email, currentUser.Email, StringComparison.OrdinalIgnoreCase)) throw new ForbiddenException("This invitation belongs to another email address.");
+            if (await context.ProjectMembers.AnyAsync(member => member.ProjectId == invitation.ProjectId && member.UserId == currentUser.UserId, cancellationToken)) throw new ConflictException("You are already a project member.");
+            context.ProjectMembers.Add(new ProjectMember { ID = Guid.NewGuid(), ProjectId = invitation.ProjectId, UserId = currentUser.UserId, Role = invitation.Role, JoinedAt = DateTime.UtcNow });
+            var channelId = await context.Conversations.Where(item => item.ProjectId == invitation.ProjectId).Select(item => (Guid?)item.ID).SingleOrDefaultAsync(cancellationToken);
+            if (channelId.HasValue) context.ConversationParticipants.Add(new ConversationParticipant { ID = Guid.NewGuid(), ConversationId = channelId.Value, UserId = currentUser.UserId, JoinedAt = DateTime.UtcNow });
+            invitation.Status = InvitationStatus.Accepted; invitation.RespondedAt = DateTime.UtcNow;
+            await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return invitation.ProjectId;
+        });
     }
 }
 
@@ -123,7 +142,7 @@ public sealed class RejectProjectInvitationHandler(AppDbContext context, ICurren
     }
 }
 
-public sealed class ChangeProjectMemberRoleHandler(AppDbContext context, ICurrentUser currentUser) : IRequestHandler<ChangeProjectMemberRoleCommand>
+public sealed class ChangeProjectMemberRoleHandler(AppDbContext context, ICurrentUser currentUser, INotificationService notifications) : IRequestHandler<ChangeProjectMemberRoleCommand>
 {
     public async Task Handle(ChangeProjectMemberRoleCommand request, CancellationToken cancellationToken)
     {
@@ -133,6 +152,11 @@ public sealed class ChangeProjectMemberRoleHandler(AppDbContext context, ICurren
         if (member.Role == ProjectRole.Owner) throw new ForbiddenException("The owner role cannot be changed.");
         member.Role = request.Role; member.UpdateAt = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
+        if (request.UserId != currentUser.UserId)
+        {
+            var projectName = await context.Projects.Where(project => project.ID == request.ProjectId).Select(project => project.Name).SingleAsync(cancellationToken);
+            await notifications.CreateAsync(new CreateNotificationRequest(request.UserId, NotificationType.RoleChange, "Project role changed", $"Your role in {projectName} is now {request.Role}.", request.ProjectId, nameof(Project)), cancellationToken);
+        }
     }
 }
 
@@ -144,6 +168,8 @@ public sealed class RemoveProjectMemberHandler(AppDbContext context, ICurrentUse
         if (actorRole != ProjectRole.Owner) throw new ForbiddenException("Only the project owner can remove members.");
         var member = await context.ProjectMembers.SingleOrDefaultAsync(item => item.ProjectId == request.ProjectId && item.UserId == request.UserId, cancellationToken) ?? throw new NotFoundException("Project member not found.");
         if (member.Role == ProjectRole.Owner) throw new ForbiddenException("The project owner cannot be removed.");
+        var channelParticipant = await context.ConversationParticipants.SingleOrDefaultAsync(item => item.Conversation.ProjectId == request.ProjectId && item.UserId == request.UserId, cancellationToken);
+        if (channelParticipant is not null) context.ConversationParticipants.Remove(channelParticipant);
         context.ProjectMembers.Remove(member); await context.SaveChangesAsync(cancellationToken);
     }
 }

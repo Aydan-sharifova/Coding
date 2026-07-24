@@ -38,6 +38,7 @@ public sealed class CollaborationHub(
             user.UserName,
             $"{user.FirstName} {user.LastName}".Trim(),
             user.AvatarUrl);
+        await Groups.AddToGroupAsync(Context.ConnectionId, UserGroup(userId));
 
         logger.LogInformation(
             "Collaboration connection {ConnectionId} established for user {UserId}",
@@ -182,6 +183,30 @@ public sealed class CollaborationHub(
         return Task.CompletedTask;
     }
 
+    public async Task JoinConversation(Guid conversationId)
+    {
+        if (!await db.ConversationParticipants.AsNoTracking().AnyAsync(item => item.ConversationId == conversationId && item.UserId == UserId))
+            throw new HubException("You are not a participant in this conversation.");
+        await Groups.AddToGroupAsync(Context.ConnectionId, ConversationGroup(conversationId));
+    }
+
+    public Task LeaveConversation(Guid conversationId) =>
+        Groups.RemoveFromGroupAsync(Context.ConnectionId, ConversationGroup(conversationId));
+
+    public async Task StartChatTyping(Guid conversationId)
+    {
+        if (!await db.ConversationParticipants.AsNoTracking().AnyAsync(item => item.ConversationId == conversationId && item.UserId == UserId))
+            throw new HubException("You are not a participant in this conversation.");
+        await Clients.OthersInGroup(ConversationGroup(conversationId)).ChatTypingStarted(conversationId, UserId);
+    }
+
+    public async Task StopChatTyping(Guid conversationId)
+    {
+        if (!await db.ConversationParticipants.AsNoTracking().AnyAsync(item => item.ConversationId == conversationId && item.UserId == UserId))
+            return;
+        await Clients.OthersInGroup(ConversationGroup(conversationId)).ChatTypingStopped(conversationId, UserId);
+    }
+
     public async Task NotifyFileChanged(Guid fileId, int versionNumber, string concurrencyToken)
     {
         await RequireFileMember(fileId);
@@ -243,4 +268,6 @@ public sealed class CollaborationHub(
 
     public static string ProjectGroup(Guid projectId) => $"project:{projectId:N}";
     public static string FileGroup(Guid fileId) => $"file:{fileId:N}";
+    public static string ConversationGroup(Guid conversationId) => $"conversation:{conversationId:N}";
+    public static string UserGroup(Guid userId) => $"user:{userId:N}";
 }

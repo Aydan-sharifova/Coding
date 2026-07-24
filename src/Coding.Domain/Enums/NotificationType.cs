@@ -7,7 +7,10 @@ namespace Coding.Enums
         Message,
         AICompleted,
         ProjectUpdated,
-        Warning
+        Warning,
+        TaskAssignment,
+        UserMention,
+        DirectMessage,
+        RoleChange
     }
 }
-

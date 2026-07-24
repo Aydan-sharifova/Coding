@@ -41,8 +41,13 @@ namespace Coding.Data
         public DbSet<CodeHistory> CodeHistories => Set<CodeHistory>();
 
         public DbSet<Message> Messages => Set<Message>();
+        public DbSet<Conversation> Conversations => Set<Conversation>();
+        public DbSet<ConversationParticipant> ConversationParticipants => Set<ConversationParticipant>();
+        public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+        public DbSet<MessageReadReceipt> MessageReadReceipts => Set<MessageReadReceipt>();
 
         public DbSet<Notification> Notifications => Set<Notification>();
+        public DbSet<UserNotificationPreference> UserNotificationPreferences => Set<UserNotificationPreference>();
 
         public DbSet<Invitation> Invitations => Set<Invitation>();
 

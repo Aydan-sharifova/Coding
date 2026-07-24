@@ -18,6 +18,11 @@ namespace Coding.Models
         public bool IsRead { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        public Guid? RelatedEntityId { get; set; }
+
+        public string? RelatedEntityType { get; set; }
+
+        public DateTime? ReadAt { get; set; }
     }
 }
-

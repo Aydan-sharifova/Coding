@@ -1,4 +1,6 @@
 namespace Coding.Api.Collaboration;
+using Coding.Application.Features.Chat;
+using Coding.Application.Features.Notifications;
 
 public sealed record TextRange(
     int StartLineNumber,
@@ -49,4 +51,12 @@ public interface ICollaborationClient
     Task TypingStarted(Guid fileId, Guid userId);
     Task TypingStopped(Guid fileId, Guid userId);
     Task FileChanged(FileChangedMessage message);
+    Task ReceiveMessage(ChatMessageItem message);
+    Task MessageRead(Guid conversationId, Guid userId, Guid? throughMessageId, DateTime readAt);
+    Task ConversationUpdated(Guid conversationId);
+    Task ChatTypingStarted(Guid conversationId, Guid userId);
+    Task ChatTypingStopped(Guid conversationId, Guid userId);
+    Task ReceiveNotification(NotificationItem notification);
+    Task NotificationRead(Guid? notificationId);
+    Task UnreadCountUpdated(int count);
 }

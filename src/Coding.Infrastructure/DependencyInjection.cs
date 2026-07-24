@@ -5,6 +5,8 @@ using Coding.Infrastructure.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Coding.Application.Features.Notifications;
+using Coding.Infrastructure.Notifications;
 
 namespace Coding.Infrastructure;
 
@@ -37,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IEmailSender, LoggingEmailSender>();
         services.AddScoped<IdentityPasswordService>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         return services;
     }

@@ -12,6 +12,8 @@ using FluentValidation;
 using MediatR;
 using System.Text.Json.Serialization;
 using Coding.Api.Collaboration;
+using Coding.Application.Features.Chat;
+using Coding.Application.Features.Notifications;
 
 namespace Coding.Api.Configuration;
 
@@ -30,6 +32,9 @@ public static class ApiServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddSingleton<ICollaborationPresenceTracker, CollaborationPresenceTracker>();
         services.AddHostedService<StaleConnectionCleanupService>();
+        services.AddSingleton<ChatNotificationRealtimePublisher>();
+        services.AddSingleton<IChatRealtimePublisher>(provider => provider.GetRequiredService<ChatNotificationRealtimePublisher>());
+        services.AddSingleton<INotificationRealtimePublisher>(provider => provider.GetRequiredService<ChatNotificationRealtimePublisher>());
         services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddMediatR(configuration => configuration.RegisterServicesFromAssemblies(
             typeof(CreateProjectCommand).Assembly,
