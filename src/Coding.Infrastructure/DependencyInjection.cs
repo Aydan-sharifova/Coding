@@ -9,6 +9,8 @@ using Coding.Application.Features.Notifications;
 using Coding.Infrastructure.Notifications;
 using Coding.Application.Features.Activities;
 using Coding.Infrastructure.Activities;
+using Coding.Application.Features.UserSettings;
+using Coding.Infrastructure.UserSettings;
 
 namespace Coding.Infrastructure;
 
@@ -51,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IdentityPasswordService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IActivityLogger, ActivityLogger>();
+        services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
         return services;
     }

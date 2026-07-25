@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Coding.Controllers;
 
-[ApiController, Authorize(Roles = "Admin"), Route("api/admin/activities")]
+[ApiController, Authorize(Roles = "SuperAdmin,Admin"), Route("api/admin/activities")]
 public sealed class ActivityController(ISender sender) : ControllerBase
 {
     [HttpGet]

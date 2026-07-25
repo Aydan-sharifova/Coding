@@ -27,6 +27,9 @@ namespace Coding.Models
         public DateTime UpdatedAt { get; set; }
 
         public DateTime? EmailVerifiedAt { get; set; }
+        public bool IsSuspended { get; set; }
+        public DateTime? SuspendedAt { get; set; }
+        public string? SuspensionReason { get; set; }
 
         public ICollection<RefreshToken> RefreshTokens { get; set; }
 

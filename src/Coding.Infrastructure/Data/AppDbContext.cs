@@ -50,6 +50,8 @@ namespace Coding.Data
         public DbSet<TaskComment> TaskComments => Set<TaskComment>();
         public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
         public DbSet<CodingSession> CodingSessions => Set<CodingSession>();
+        public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
+        public DbSet<UserSession> UserSessions => Set<UserSession>();
 
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<UserNotificationPreference> UserNotificationPreferences => Set<UserNotificationPreference>();

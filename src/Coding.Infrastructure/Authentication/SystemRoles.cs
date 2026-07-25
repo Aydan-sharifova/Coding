@@ -5,6 +5,8 @@ public static class SystemRoles
     public const string Admin = "Admin";
     public const string Developer = "Developer";
     public const string Guest = "Guest";
+    public const string SuperAdmin = "SuperAdmin";
+    public const string User = "User";
 
-    public static readonly string[] All = [Admin, Developer, Guest];
+    public static readonly string[] All = [SuperAdmin, Admin, User];
 }

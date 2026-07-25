@@ -65,6 +65,7 @@ try
         app.UseHttpsRedirection();
     }
     app.UseCors("Client");
+    app.UseStaticFiles();
     app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();

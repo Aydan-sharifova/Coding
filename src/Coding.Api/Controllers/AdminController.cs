@@ -1,28 +1,21 @@
-using Coding.DTOS.Auth;
-using Coding.Services.Interfaces;
+using Coding.Application.Features.Administration;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Coding.Controllers;
 
-[ApiController]
-[Route("api/admin")]
-[Authorize(Roles = "Admin")]
-public sealed class AdminController : ControllerBase
+[ApiController, Route("api/admin"), Authorize(Roles = "SuperAdmin,Admin")]
+public sealed class AdminController(ISender sender) : ControllerBase
 {
-    private readonly IRoleService roleService;
-
-    public AdminController(IRoleService roleService)
-    {
-        this.roleService = roleService;
-    }
-
-    [HttpPost("roles")]
-    public async Task<IActionResult> AssignRole(
-        AssignRoleRequest request,
-        CancellationToken cancellationToken)
-    {
-        await roleService.AssignRoleAsync(request, cancellationToken);
-        return NoContent();
-    }
+    [HttpGet("statistics")] public Task<PlatformStatistics> Statistics(CancellationToken ct) => sender.Send(new GetPlatformStatisticsQuery(), ct);
+    [HttpGet("users")] public Task<PageResult<AdminUserListItem>> Users([FromQuery] string? search, [FromQuery] bool? suspended, [FromQuery] string? role, [FromQuery] int page = 1, [FromQuery] int pageSize = 25, CancellationToken ct = default) => sender.Send(new GetAdminUsersQuery(search, suspended, role, page, pageSize), ct);
+    [HttpGet("users/{userId:guid}")] public Task<AdminUserDetails> UserDetails(Guid userId, CancellationToken ct) => sender.Send(new GetAdminUserDetailsQuery(userId), ct);
+    [HttpPut("users/{userId:guid}/suspension")] public async Task<IActionResult> Suspension(Guid userId, SetSuspensionRequest request, CancellationToken ct) { await sender.Send(new SetUserSuspensionCommand(userId, request.Suspended, request.Reason), ct); return NoContent(); }
+    [HttpPut("users/{userId:guid}/roles/{role}"), Authorize(Roles = "SuperAdmin")] public async Task<IActionResult> Role(Guid userId, string role, SetRoleRequest request, CancellationToken ct) { await sender.Send(new SetSystemRoleCommand(userId, role, request.Enabled), ct); return NoContent(); }
+    [HttpGet("projects")] public Task<PageResult<AdminProjectItem>> Projects([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 25, CancellationToken ct = default) => sender.Send(new GetAdminProjectsQuery(search, page, pageSize), ct);
+    [HttpDelete("projects/{projectId:guid}")] public async Task<IActionResult> DeleteProject(Guid projectId, [FromBody] DeleteProjectRequest request, CancellationToken ct) { await sender.Send(new DeleteAbusiveProjectCommand(projectId, request.Reason), ct); return NoContent(); }
 }
+public sealed record SetSuspensionRequest(bool Suspended, string? Reason);
+public sealed record SetRoleRequest(bool Enabled);
+public sealed record DeleteProjectRequest(string Reason);

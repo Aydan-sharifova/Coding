@@ -20,7 +20,8 @@ public sealed class AuthenticationService(
     IEmailSender emailSender,
     IConfiguration configuration,
     IdentityPasswordService passwordService,
-    IActivityLogger activityLogger) : IAuthenticationService
+    IActivityLogger activityLogger,
+    IHttpContextAccessor httpContextAccessor) : IAuthenticationService
 {
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
     private static readonly TimeSpan AccountTokenLifetime = TimeSpan.FromHours(1);
@@ -40,7 +41,7 @@ public sealed class AuthenticationService(
         }
 
         var guestRole = await context.Roles.SingleAsync(
-            role => role.Name == SystemRoles.Guest,
+            role => role.Name == SystemRoles.User,
             cancellationToken);
 
         var now = DateTime.UtcNow;
@@ -73,7 +74,7 @@ public sealed class AuthenticationService(
             verification.PlainTextToken,
             cancellationToken);
 
-        return await IssueTokensAsync(user, [SystemRoles.Guest], cancellationToken);
+        return await IssueTokensAsync(user, [SystemRoles.User], cancellationToken);
     }
 
     public async Task<AuthResponse> LoginAsync(
@@ -88,6 +89,8 @@ public sealed class AuthenticationService(
 
         if (user is null || !passwordService.Verify(user, request.Password))
             throw new UnauthorizedException("Invalid email or password.");
+        if (user.IsSuspended)
+            throw new UnauthorizedException("This account has been suspended. Contact support.");
 
         user.LastSeen = DateTime.UtcNow;
         var roles = user.UserRoles.Select(item => item.Role.Name).Distinct().ToArray();
@@ -109,6 +112,8 @@ public sealed class AuthenticationService(
 
         if (storedToken is null || storedToken.IsRevoked || storedToken.ExpireDate <= DateTime.UtcNow)
             throw new UnauthorizedException("The refresh token is invalid or expired.");
+        if (storedToken.User.IsSuspended)
+            throw new UnauthorizedException("This account has been suspended.");
 
         storedToken.IsRevoked = true;
         storedToken.UpdateAt = DateTime.UtcNow;
@@ -203,6 +208,7 @@ public sealed class AuthenticationService(
         CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
+        var sessionId = Guid.NewGuid();
         var expiresAt = now.AddMinutes(configuration.GetValue("Jwt:AccessTokenMinutes", 15));
         var key = configuration["Jwt:Key"]!;
 
@@ -212,6 +218,7 @@ public sealed class AuthenticationService(
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(JwtRegisteredClaimNames.UniqueName, user.UserName),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            ,new("sid", sessionId.ToString())
         };
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
@@ -228,12 +235,22 @@ public sealed class AuthenticationService(
             credentials);
 
         var plainRefreshToken = GenerateToken();
-        context.RefreshTokens.Add(new RefreshToken
+        var refreshToken = new RefreshToken
         {
+            ID = Guid.NewGuid(),
             UserId = user.ID,
             Token = HashToken(plainRefreshToken),
             ExpireDate = now.Add(RefreshTokenLifetime),
             CreatAt = now
+        };
+        context.RefreshTokens.Add(refreshToken);
+        var request = httpContextAccessor.HttpContext;
+        context.UserSessions.Add(new UserSession
+        {
+            Id = sessionId, UserId = user.ID, RefreshToken = refreshToken,
+            CreatedAt = now, LastSeenAt = now, ExpiresAt = refreshToken.ExpireDate,
+            IpAddress = request?.Connection.RemoteIpAddress?.ToString(),
+            UserAgent = request?.Request.Headers.UserAgent.ToString()
         });
         await context.SaveChangesAsync(cancellationToken);
 

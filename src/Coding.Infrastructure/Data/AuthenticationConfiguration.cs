@@ -13,6 +13,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(item => item.Email).HasMaxLength(254);
         builder.Property(item => item.UserName).HasMaxLength(50);
         builder.Property(item => item.PasswordHash).HasMaxLength(100);
+        builder.Property(item => item.SuspensionReason).HasMaxLength(500);
     }
 }
 
@@ -43,7 +44,46 @@ public sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
                 Name = "Guest",
                 Description = "Built-in Guest role.",
                 CreatAt = DateTime.UnixEpoch
+            },
+            new Role
+            {
+                ID = Guid.Parse("44444444-4444-4444-4444-444444444444"),
+                Name = "SuperAdmin",
+                Description = "Built-in platform owner role.",
+                CreatAt = DateTime.UnixEpoch
+            },
+            new Role
+            {
+                ID = Guid.Parse("55555555-5555-5555-5555-555555555555"),
+                Name = "User",
+                Description = "Built-in platform user role.",
+                CreatAt = DateTime.UnixEpoch
             });
+    }
+}
+
+public sealed class UserPreferenceConfiguration : IEntityTypeConfiguration<UserPreference>
+{
+    public void Configure(EntityTypeBuilder<UserPreference> builder)
+    {
+        builder.HasKey(x => x.UserId);
+        builder.Property(x => x.Theme).HasMaxLength(20);
+        builder.Property(x => x.Language).HasMaxLength(10);
+        builder.HasOne(x => x.User).WithOne().HasForeignKey<UserPreference>(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class UserSessionConfiguration : IEntityTypeConfiguration<UserSession>
+{
+    public void Configure(EntityTypeBuilder<UserSession> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.IpAddress).HasMaxLength(64);
+        builder.Property(x => x.UserAgent).HasMaxLength(512);
+        builder.HasIndex(x => x.RefreshTokenId).IsUnique();
+        builder.HasIndex(x => new { x.UserId, x.ExpiresAt });
+        builder.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.RefreshToken).WithOne().HasForeignKey<UserSession>(x => x.RefreshTokenId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 
