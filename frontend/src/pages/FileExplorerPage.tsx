@@ -21,6 +21,7 @@ import { signalRService } from "../features/collaboration/signalRService";
 import { useCollaboration } from "../features/collaboration/useCollaboration";
 import { PresencePanel } from "../features/collaboration/PresencePanel";
 import { useCollaborationStore } from "../features/collaboration/collaborationStore";
+import { useCodingSession } from "../features/analytics/useCodingSession";
 
 function MonacoPane({ tab }: { tab: EditorTab }) {
   const { theme } = useTheme(); const fontSize = useEditorStore((state) => state.fontSize); const updateContent = useEditorStore((state) => state.updateContent); const setCursor = useEditorStore((state) => state.setCursor); const setViewState = useEditorStore((state) => state.setViewState); const remoteCursors = useCollaborationStore((state) => state.remoteCursors); const { configure } = useMonacoConfiguration(); const editorRef = useRef<editor.IStandaloneCodeEditor | undefined>(undefined); const decorations = useRef<editor.IEditorDecorationsCollection | undefined>(undefined); const typingTimer = useRef<number | undefined>(undefined);
@@ -33,9 +34,11 @@ function MonacoPane({ tab }: { tab: EditorTab }) {
 export function FileExplorerPage() {
   const { projectId = "" } = useParams(); const navigate = useNavigate(); const { show } = useToast(); const explorer = useExplorerSnapshot(); const tabs = useEditorTabs(); const { saveNow } = useAutoSave();
   const collaboration = useCollaboration(projectId, tabs.activeTabId);
+  useCodingSession(projectId, tabs.activeTabId);
   const tree = useQuery({ queryKey: ["file-tree", projectId], queryFn: () => fileExplorerApi.tree(projectId), enabled: Boolean(projectId) });
+  const loadedTree = useRef<WorkspaceNode[] | undefined>(undefined);
   const [create, setCreate] = useState<{ type: "file" | "folder"; parentId?: string }>(); const [newName, setNewName] = useState(""); const [deleting, setDeleting] = useState<WorkspaceNode>(); const [closing, setClosing] = useState<EditorTab>(); const [quickOpen, setQuickOpen] = useState(false); const [quickFilter, setQuickFilter] = useState(""); const [historyKey, setHistoryKey] = useState(0);
-  useEffect(() => { if (tree.data) explorerStore.load(tree.data); }, [tree.data]);
+  useEffect(() => { if (tree.data && loadedTree.current !== tree.data) { loadedTree.current = tree.data; explorerStore.load(tree.data); } }, [tree.data]);
   const reloadTree = async () => { const result = await tree.refetch(); if (result.data) explorerStore.load(result.data); };
   const requestClose = useCallback((id?: string) => { if (!id) return; const tab = useEditorStore.getState().tabs[id]; if (!tab) return; if (tab.content !== tab.savedContent) setClosing(tab); else useEditorStore.getState().closeTab(id); }, []);
   useKeyboardShortcuts({ save: () => { if (tabs.activeTabId) void saveNow(tabs.activeTabId).catch((error) => show(error instanceof Error ? error.message : "Save failed.", "error")); }, close: () => requestClose(tabs.activeTabId), quickOpen: () => setQuickOpen(true) });

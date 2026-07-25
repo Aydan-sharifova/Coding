@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useCollaborationStore } from "./collaborationStore";
 
 const palette = ["#7c6df2", "#1db7a6", "#e17055", "#0984e3", "#d63075", "#6c5ce7"];
@@ -6,7 +7,8 @@ export function userColor(userId: string) {
   return palette[Math.abs(hash) % palette.length];
 }
 export function PresencePanel() {
-  const users = useCollaborationStore((state) => Object.values(state.users));
+  const usersById = useCollaborationStore((state) => state.users);
+  const users = useMemo(() => Object.values(usersById), [usersById]);
   const typing = useCollaborationStore((state) => state.typingUserIds);
   return <section className="presence-panel"><header><strong>ONLINE</strong><span>{users.length}</span></header><div className="presence-avatars">
     {users.map((user) => <div className="presence-user" key={user.userId} title={user.displayName}>

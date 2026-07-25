@@ -5,11 +5,27 @@ import { detectLanguage } from "../languages";
 import { useEditorStore } from "../editorStore";
 
 export function useEditorTabs() {
-  const queryClient = useQueryClient(); const store = useEditorStore();
+  const queryClient = useQueryClient();
+  const tabs = useEditorStore((state) => state.tabs);
+  const openTabIds = useEditorStore((state) => state.openTabIds);
+  const activeTabId = useEditorStore((state) => state.activeTabId);
+  const closedTabHistory = useEditorStore((state) => state.closedTabHistory);
+  const fontSize = useEditorStore((state) => state.fontSize);
+  const leftWidth = useEditorStore((state) => state.leftWidth);
+  const rightWidth = useEditorStore((state) => state.rightWidth);
+  const rightPanelVisible = useEditorStore((state) => state.rightPanelVisible);
+  const activateTab = useEditorStore((state) => state.activateTab);
+  const openTab = useEditorStore((state) => state.openTab);
+  const closeTab = useEditorStore((state) => state.closeTab);
+  const discardChanges = useEditorStore((state) => state.discardChanges);
+  const acceptExternal = useEditorStore((state) => state.acceptExternal);
+  const setFontSize = useEditorStore((state) => state.setFontSize);
+  const setPanelWidths = useEditorStore((state) => state.setPanelWidths);
+  const toggleRightPanel = useEditorStore((state) => state.toggleRightPanel);
   const openFile = async (node: WorkspaceNode) => {
-    if (store.tabs[node.id]) { store.activateTab(node.id); return; }
+    if (useEditorStore.getState().tabs[node.id]) { activateTab(node.id); return; }
     const file = await queryClient.fetchQuery({ queryKey: ["file-content", node.id], queryFn: () => fileExplorerApi.content(node.id) });
-    store.openTab({ id: node.id, name: node.name, path: file.path, language: detectLanguage(node.name), content: file.content, savedContent: file.content, concurrencyToken: file.concurrencyToken });
+    openTab({ id: node.id, name: node.name, path: file.path, language: detectLanguage(node.name), content: file.content, savedContent: file.content, concurrencyToken: file.concurrencyToken });
   };
-  return { ...store, openFile, activeTab: store.activeTabId ? store.tabs[store.activeTabId] : undefined };
+  return { tabs, openTabIds, activeTabId, closedTabHistory, fontSize, leftWidth, rightWidth, rightPanelVisible, activateTab, closeTab, discardChanges, acceptExternal, setFontSize, setPanelWidths, toggleRightPanel, openFile, activeTab: activeTabId ? tabs[activeTabId] : undefined };
 }

@@ -88,7 +88,7 @@ async function request<TResponse>(path: string, options: RequestOptions = {}): P
 }
 
 export const apiClient = {
-  get: <TResponse>(path: string) => request<TResponse>(path),
+  get: <TResponse>(path: string, options?: RequestOptions) => request<TResponse>(path, options),
   post: <TResponse>(path: string, body?: unknown, options?: RequestOptions) => request<TResponse>(path, {
     ...options,
     method: "POST",

@@ -17,7 +17,7 @@ function applyOperation(content: string, range: TextRange, insertedText: string)
 }
 
 export function useCollaboration(projectId: string, activeFileId?: string) {
-  const collaboration = useCollaborationStore();
+  const connectionState = useCollaborationStore((state) => state.connectionState);
   useEffect(() => {
     if (!projectId) return;
     void signalRService.joinProject(projectId).catch((error) => console.error("Unable to join collaboration project", error));
@@ -48,5 +48,5 @@ export function useCollaboration(projectId: string, activeFileId?: string) {
     const offResync = signalRService.onResync((message) => void resync(message.fileId));
     return () => { offChanged(); offResync(); };
   }, []);
-  return collaboration;
+  return { connectionState };
 }
