@@ -69,7 +69,7 @@ async function request<TResponse>(path: string, options: RequestOptions = {}): P
       ...requestOptions,
       credentials: "include",
       headers: {
-        ...(requestOptions.body ? { "Content-Type": "application/json" } : {}),
+        ...(requestOptions.body && !(requestOptions.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
@@ -94,7 +94,8 @@ export const apiClient = {
     method: "POST",
     body: body === undefined ? undefined : JSON.stringify(body),
   }),
+  postForm: <TResponse>(path: string, body: FormData) => request<TResponse>(path, { method: "POST", body }),
   put: <TResponse>(path: string, body: unknown) => request<TResponse>(path, { method: "PUT", body: JSON.stringify(body) }),
-  delete: <TResponse>(path: string) => request<TResponse>(path, { method: "DELETE" }),
+  delete: <TResponse>(path: string, body?: unknown) => request<TResponse>(path, { method: "DELETE", body: body === undefined ? undefined : JSON.stringify(body) }),
   refreshSession,
 };

@@ -36,7 +36,7 @@ export function DashboardLayout() {
         <nav className="sidebar-nav" aria-label="Main navigation">
           <p>Workspace</p>
           {navItems.map((item) => <NavLink key={item.label} to={item.path} end={item.path === "/dashboard"} onClick={() => setSidebarOpen(false)}><Icon name={item.icon} />{item.label}</NavLink>)}
-          {user?.roles.includes("Admin") && <NavLink to="/admin/activity" onClick={() => setSidebarOpen(false)}><Icon name="activity" />Activity</NavLink>}
+          {user?.roles.some((role) => ["SuperAdmin", "Admin"].includes(role)) && <><NavLink to="/admin" onClick={() => setSidebarOpen(false)}><Icon name="settings" />Admin</NavLink><NavLink to="/admin/activity" onClick={() => setSidebarOpen(false)}><Icon name="activity" />Activity</NavLink></>}
           <p>Manage</p>
           <NavLink to="/settings"><Icon name="settings" />Settings</NavLink>
           <NavLink to="/help"><Icon name="help" />Help center</NavLink>

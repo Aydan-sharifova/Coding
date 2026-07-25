@@ -7,56 +7,83 @@
   <MonoDevelop.Ide.ItemProperties.Coding.Application FirstBuild="True" />
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
   <MonoDevelop.Ide.ItemProperties.Coding PreferredExecutionTarget="/Applications/Google Chrome.app" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="src/Coding.Api/Dockerfile">
+  <MonoDevelop.Ide.Workbench ActiveDocument="src/Coding.Application/Features/AiAssistant/AiContracts.cs">
     <Files>
-      <File FileName="Models/User.cs" />
-      <File FileName="Models/Role.cs" />
-      <File FileName="Models/UserRole.cs" />
-      <File FileName="Models/RefreshToken.cs" />
-      <File FileName="Models/Workspace.cs" />
-      <File FileName="Models/WorkspaceMember.cs" />
-      <File FileName="Models/Project.cs" />
-      <File FileName="Models/ProjectMember.cs" />
-      <File FileName="Models/Folder.cs" />
-      <File FileName="Models/FileItem.cs" />
-      <File FileName="Models/CodeHistory.cs" />
-      <File FileName="Models/Message.cs" />
-      <File FileName="Models/Nofication.cs" />
-      <File FileName="Models/Invitation.cs" />
-      <File FileName="Models/GitCommit.cs" />
-      <File FileName="Models/AIRequest.cs" />
-      <File FileName="Models/AIResponse.cs" />
-      <File FileName="Enums/WorkspaceRole.cs" />
-      <File FileName="Enums/ProjectRole.cs" Line="1" Column="1" />
-      <File FileName="Enums/NotificationType.cs" Line="1" Column="1" />
-      <File FileName="Enums/InvitationStatus.cs" Line="1" Column="1" />
-      <File FileName="Enums/AIRequestType.cs" Line="1" Column="1" />
-      <File FileName="Data/AppDbContext.cs" Line="1" Column="1" />
-      <File FileName="Program.cs" Line="1" Column="1" />
-      <File FileName="Extentions/FileExtention.cs" />
-      <File FileName="Enums/ViewType.cs" />
-      <File FileName="Models/BaseEntity/Base.cs" />
-      <File FileName="DTOS/User/UserCreateDTO.cs" />
-      <File FileName="DTOS/User/UserGetDTO.cs" />
-      <File FileName="DTOS/User/UserUpdateDTO.cs" />
-      <File FileName="DTOS/AIRequest/AIRequestUpdateDTO.cs" />
-      <File FileName="DTOS/AIRequest/AIRequestGetDTO.cs" />
-      <File FileName="DTOS/AIResponse/AIResponseCreateDTO.cs" />
-      <File FileName="DTOS/AIResponse/AIResponseGetDTO.cs" />
-      <File FileName="DTOS/AIResponse/AIResponseUpdateDTO.cs" />
-      <File FileName="Controllers/AIRequestController.cs" />
-      <File FileName="Services/Interfaces/ICrudService.cs" />
-      <File FileName="Services/Implaments/CrudService.cs" Line="37" Column="35" />
-      <File FileName="Controllers/AIResponseController.cs" Line="1" Column="1" />
-      <File FileName="src/Coding.Infrastructure/Data/AppDbContextFactory.cs" Line="1" Column="1" />
-      <File FileName="src/Coding.Domain/Enums/FileSize.cs" Line="1" Column="1" />
-      <File FileName="src/Coding.Infrastructure/DependencyInjection.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Controllers/AdminController.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Controllers/RefreshTokenController.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Controllers/RoleController.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Controllers/UserController.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Controllers/UserRoleController.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Controllers/WorkspaceController.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Infrastructure/GlobalExceptionHandler.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Abstractions/ICurrentUser.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Behaviors/ValidationBehavior.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/DTOS/CodeHistory/CodeHistoryCreateDTO.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/DTOS/CodeHistory/CodeHistoryGetDTO.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/DTOS/CodeHistory/CodeHistoryUpdateDTO.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/Services/Implaments/CrudService.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Infrastructure/CurrentUser.cs" Line="6" Column="37" />
+      <File FileName="src/Coding.Infrastructure/Authentication/AuthenticationService.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/Authentication/IdentityPasswordService.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/Authentication/LoggingEmailSender.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/Authentication/RoleService.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/Authentication/SystemRoles.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/Data/WorkspaceNodeConfiguration.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/Projects/ProjectHandlers.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Configuration/ApiServiceCollectionExtensions.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/DTOS/User/UserCreateDTO.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/DTOS/User/UserGetDTO.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Program.cs" Line="78" Column="1" />
       <File FileName="src/Coding.Api/Dockerfile" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Coding.http" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Exceptions/ConflictException.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Exceptions/ForbiddenException.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Exceptions/NotFoundException.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Exceptions/UnauthorizedException.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Extensions/FileExtention.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Features/FileExplorer/FileExplorerContracts.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Features/Projects/ProjectContracts.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Services/Interfaces/IAuthenticationService.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Services/Interfaces/IEmailSender.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Services/Interfaces/IRoleService.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Domain/Models/AIRequest.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Domain/Models/User.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/appsettings.json" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Properties/launchSettings.json" Line="30" Column="32" />
+      <File FileName="src/Coding.Api/Controllers/NotificationController.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Configuration/SwaggerAuthorizationOperationFilter.cs" Line="1" Column="2" />
+      <File FileName="src/Coding.Api/Collaboration/CollaborationContracts.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Collaboration/CollaborationHub.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Collaboration/CollaborationPresenceTracker.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Collaboration/StaleConnectionCleanupService.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Api/Collaboration/ChatNotificationRealtimePublisher.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/AiAssistant/AiConversationService.cs" Line="11" Column="16" />
+      <File FileName="src/Coding.Infrastructure/Data/AiAssistantConfiguration.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/Data/AppDbContext.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Infrastructure/Activities/ActivityLogging.cs" Line="1" Column="1" />
+      <File FileName="src/Coding.Application/Features/AiAssistant/AiContracts.cs" Line="28" Column="35" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State name="__root__">
-          <Node name="Coding" expanded="True" />
+          <Node name="Coding">
+            <Node name="src" expanded="True">
+              <Node name="Coding.Api" expanded="True">
+                <Node name="Properties" expanded="True" />
+              </Node>
+              <Node name="Coding.Application" expanded="True">
+                <Node name="Features" expanded="True">
+                  <Node name="AiAssistant" expanded="True" />
+                </Node>
+              </Node>
+              <Node name="Coding.Infrastructure" expanded="True">
+                <Node name="Activities" expanded="True" />
+                <Node name="AiAssistant" expanded="True" />
+                <Node name="Authentication" expanded="True" />
+                <Node name="Projects" expanded="True" />
+              </Node>
+            </Node>
+          </Node>
         </State>
       </Pad>
     </Pads>
