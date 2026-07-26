@@ -7,9 +7,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coding.Infrastructure.Dashboard;
 
-public sealed class GetDashboardHandler(AppDbContext db, ICurrentUser currentUser) : IRequestHandler<GetDashboardQuery, DashboardDto>
+public sealed class GetDashboardHandler(
+    AppDbContext db,
+    ICurrentUser currentUser,
+    ICacheService cache) : IRequestHandler<GetDashboardQuery, DashboardDto>
 {
-    public async Task<DashboardDto> Handle(GetDashboardQuery request, CancellationToken ct)
+    public Task<DashboardDto> Handle(GetDashboardQuery request, CancellationToken ct) =>
+        cache.GetOrCreateAsync(
+            $"dashboard:user:{currentUser.UserId:N}",
+            LoadAsync,
+            TimeSpan.FromSeconds(45),
+            ct);
+
+    private async Task<DashboardDto> LoadAsync(CancellationToken ct)
     {
         var now = DateTime.UtcNow; var today = now.Date; var weekStart = today.AddDays(-6); var previousWeekStart = weekStart.AddDays(-7);
         var projectIds = await db.ProjectMembers.AsNoTracking().Where(x => x.UserId == currentUser.UserId).Select(x => x.ProjectId).ToListAsync(ct);

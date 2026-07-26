@@ -8,5 +8,6 @@ public enum AiAssistantAction
     SuggestFix,
     Optimize,
     GenerateTests,
-    Refactor
+    Refactor,
+    GenerateCode
 }

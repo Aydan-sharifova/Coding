@@ -42,6 +42,7 @@ try
     app.UseForwardedHeaders();
     app.UseSerilogRequestLogging();
     app.UseExceptionHandler();
+    app.UseResponseCompression();
 
     if (!app.Environment.IsDevelopment())
     {

@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Net.Mail;
 using System.Text;
 using Coding.Application.Features.Activities;
 
@@ -66,15 +67,39 @@ public sealed class AuthenticationService(
         var verification = CreateAccountToken(user, AccountTokenType.EmailVerification);
         user.AccountTokens.Add(verification.Entity);
 
-        context.Users.Add(user);
-        await context.SaveChangesAsync(cancellationToken);
+        var executionStrategy = context.Database.CreateExecutionStrategy();
+        return await executionStrategy.ExecuteAsync(async () =>
+        {
+            await using var transaction =
+                await context.Database.BeginTransactionAsync(cancellationToken);
 
-        await emailSender.SendEmailVerificationAsync(
-            user.Email,
-            verification.PlainTextToken,
-            cancellationToken);
+            try
+            {
+                context.Users.Add(user);
+                await context.SaveChangesAsync(cancellationToken);
 
-        return await IssueTokensAsync(user, [SystemRoles.User], cancellationToken);
+                await emailSender.SendEmailVerificationAsync(
+                    user.Email,
+                    verification.PlainTextToken,
+                    cancellationToken);
+
+                var response = await IssueTokensAsync(
+                    user,
+                    [SystemRoles.User],
+                    cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+                return response;
+            }
+            catch (SmtpException exception)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                context.ChangeTracker.Clear();
+                throw new ServiceUnavailableException(
+                    "The verification email could not be sent. No account was created. Please try again later.",
+                    exception);
+            }
+        });
     }
 
     public async Task<AuthResponse> LoginAsync(

@@ -13,6 +13,8 @@ using Coding.Application.Features.UserSettings;
 using Coding.Infrastructure.UserSettings;
 using Coding.Application.Features.AiAssistant;
 using Coding.Infrastructure.AiAssistant;
+using Coding.Infrastructure.Caching;
+using Coding.Application.Abstractions;
 
 namespace Coding.Infrastructure;
 
@@ -42,6 +44,7 @@ public static class DependencyInjection
 
         services.AddScoped(typeof(ICrudService<,,,>), typeof(CrudService<,,,>));
         services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddSingleton<ICacheService, MemoryCacheService>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddOptions<SmtpOptions>().Bind(configuration.GetSection(SmtpOptions.SectionName))
             .Validate(x => !x.Enabled || (!string.IsNullOrWhiteSpace(x.Host) && x.Port is > 0 and <= 65535 && !string.IsNullOrWhiteSpace(x.FromEmail) && Uri.TryCreate(x.ClientBaseUrl, UriKind.Absolute, out _)), "Enabled SMTP requires a valid host, port, from address, and client base URL.")

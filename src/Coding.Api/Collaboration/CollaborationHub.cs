@@ -6,10 +6,11 @@ using Coding.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Coding.Api.Collaboration;
 
-[Authorize]
+[Authorize, EnableRateLimiting("realtime")]
 public sealed class CollaborationHub(
     AppDbContext db,
     ICollaborationPresenceTracker presence,

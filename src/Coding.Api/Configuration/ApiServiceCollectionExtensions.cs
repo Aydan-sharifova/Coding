@@ -14,6 +14,8 @@ using System.Text.Json.Serialization;
 using Coding.Api.Collaboration;
 using Coding.Application.Features.Chat;
 using Coding.Application.Features.Notifications;
+using Microsoft.AspNetCore.ResponseCompression;
+using System.IO.Compression;
 
 namespace Coding.Api.Configuration;
 
@@ -29,6 +31,16 @@ public static class ApiServiceCollectionExtensions
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddHttpClient();
         services.AddMemoryCache();
+        services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+            options.Providers.Add<BrotliCompressionProvider>();
+            options.Providers.Add<GzipCompressionProvider>();
+        });
+        services.Configure<BrotliCompressionProviderOptions>(options =>
+            options.Level = CompressionLevel.Fastest);
+        services.Configure<GzipCompressionProviderOptions>(options =>
+            options.Level = CompressionLevel.Fastest);
         services.AddHttpContextAccessor();
         services.AddSingleton<ICollaborationPresenceTracker, CollaborationPresenceTracker>();
         services.AddHostedService<StaleConnectionCleanupService>();
@@ -41,7 +53,9 @@ public static class ApiServiceCollectionExtensions
             typeof(CreateProjectHandler).Assembly));
         services.AddValidatorsFromAssemblyContaining<CreateProjectValidator>();
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestLoggingBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ActivityLoggingBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 
         services.AddCors(options =>
         {
@@ -88,6 +102,29 @@ public static class ApiServiceCollectionExtensions
                         Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0,
                         AutoReplenishment = true
+                    }));
+            options.AddPolicy("ai", httpContext =>
+                RateLimitPartition.GetTokenBucketLimiter(
+                    httpContext.User.Identity?.Name
+                    ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                    ?? "anonymous",
+                    _ => new TokenBucketRateLimiterOptions
+                    {
+                        TokenLimit = 12,
+                        TokensPerPeriod = 6,
+                        ReplenishmentPeriod = TimeSpan.FromMinutes(1),
+                        QueueLimit = 1,
+                        AutoReplenishment = true
+                    }));
+            options.AddPolicy("realtime", httpContext =>
+                RateLimitPartition.GetConcurrencyLimiter(
+                    httpContext.User.Identity?.Name
+                    ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                    ?? "anonymous",
+                    _ => new ConcurrencyLimiterOptions
+                    {
+                        PermitLimit = 8,
+                        QueueLimit = 0
                     }));
         });
 

@@ -2,10 +2,11 @@ using System.Text.Json;
 using Coding.Application.Features.AiAssistant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Coding.Controllers;
 
-[ApiController, Authorize, Route("api/ai")]
+[ApiController, Authorize, Route("api/ai"), EnableRateLimiting("ai")]
 public sealed class AiAssistantController(
     IAiConversationService conversations,
     ILogger<AiAssistantController> logger) : ControllerBase

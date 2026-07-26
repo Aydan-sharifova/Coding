@@ -60,6 +60,8 @@ public sealed class DevelopmentAiProvider : IAiProvider
                 $"{contextNote}\n\n{GenerateTests(request.ProgrammingLanguage)}",
             AiAssistantAction.Refactor =>
                 $"{contextNote}\n\n{Refactor(code)}",
+            AiAssistantAction.GenerateCode =>
+                $"{contextNote}\n\n{GenerateCode(request)}",
             _ =>
                 $"{contextNote}\n\n{AnswerChat(request)}"
         };
@@ -119,6 +121,25 @@ public sealed class DevelopmentAiProvider : IAiProvider
         string.IsNullOrWhiteSpace(code)
             ? "The current file is empty. Add or select code before requesting a refactor."
             : "Separate orchestration from business rules, extract small units with intention-revealing names, remove duplicated branches, and preserve behavior with tests. Do not combine this refactor with API or persistence contract changes.";
+
+    private static string GenerateCode(AiRequest request)
+    {
+        if (request.ProgrammingLanguage.Contains("typescript", StringComparison.OrdinalIgnoreCase))
+            return """
+                   ```ts
+                   export function generatedFunction(input: string): string {
+                     if (!input.trim()) {
+                       throw new Error("Input is required.");
+                     }
+
+                     return input.trim();
+                   }
+                   ```
+                   Describe the exact behavior in the prompt to generate a more specific implementation.
+                   """;
+
+        return $"Generate production-ready {request.ProgrammingLanguage} code for the requested behavior, including input validation, explicit error handling, and testable boundaries. Configure OpenAI__ApiKey for request-specific model-generated implementations.";
+    }
 
     private static string AnswerChat(AiRequest request)
     {

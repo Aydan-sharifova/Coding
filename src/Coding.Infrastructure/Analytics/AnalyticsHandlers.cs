@@ -8,10 +8,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coding.Infrastructure.Analytics;
 
-public sealed class GetAnalyticsDashboardHandler(AppDbContext db, ICurrentUser currentUser)
+public sealed class GetAnalyticsDashboardHandler(
+    AppDbContext db,
+    ICurrentUser currentUser,
+    ICacheService cache)
     : IRequestHandler<GetAnalyticsDashboardQuery, AnalyticsDashboardDto>
 {
-    public async Task<AnalyticsDashboardDto> Handle(GetAnalyticsDashboardQuery request, CancellationToken ct)
+    public Task<AnalyticsDashboardDto> Handle(GetAnalyticsDashboardQuery request, CancellationToken ct)
+    {
+        var fromKey = request.From?.ToUniversalTime().Ticks ?? 0;
+        var toKey = request.To?.ToUniversalTime().Ticks ?? 0;
+        return cache.GetOrCreateAsync(
+            $"analytics:user:{currentUser.UserId:N}:project:{request.ProjectId?.ToString("N") ?? "all"}:{fromKey}:{toKey}",
+            token => LoadAsync(request, token),
+            TimeSpan.FromMinutes(2),
+            ct);
+    }
+
+    private async Task<AnalyticsDashboardDto> LoadAsync(
+        GetAnalyticsDashboardQuery request,
+        CancellationToken ct)
     {
         var to = (request.To ?? DateTime.UtcNow).ToUniversalTime();
         var from = (request.From ?? to.AddDays(-30)).ToUniversalTime();
