@@ -1,6 +1,6 @@
 import type { SVGProps } from "react";
 
-export type IconName = "activity" | "bell" | "chart" | "chevron" | "code" | "dashboard" | "folder" | "help" | "menu" | "moon" | "plus" | "search" | "settings" | "sun" | "team" | "trend";
+export type IconName = "activity" | "bell" | "chart" | "check" | "chevron" | "code" | "dashboard" | "folder" | "help" | "menu" | "moon" | "plus" | "search" | "settings" | "sun" | "team" | "trend";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -10,6 +10,7 @@ const paths: Record<IconName, React.ReactNode> = {
   activity: <><path d="M3 12h4l2.5-7 5 14 2.5-7h4" /></>,
   bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></>,
   chart: <><path d="M4 19V9" /><path d="M10 19V5" /><path d="M16 19v-7" /><path d="M22 19V3" /></>,
+  check: <path d="m5 12 4 4L19 6" />,
   chevron: <path d="m9 18 6-6-6-6" />,
   code: <><path d="m8 9-4 3 4 3" /><path d="m16 9 4 3-4 3" /><path d="m14 5-4 14" /></>,
   dashboard: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,

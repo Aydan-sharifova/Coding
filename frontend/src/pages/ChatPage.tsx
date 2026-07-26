@@ -4,8 +4,10 @@ import { chatApi } from "../features/chat/api";
 import type { Conversation } from "../features/chat/types";
 import { signalRService } from "../features/collaboration/signalRService";
 import { useAuth } from "../hooks/useAuth";
+import { usePageTranslation } from "../hooks/usePageTranslation";
 
 export function ChatPage() {
+  const { pt } = usePageTranslation();
   const client = useQueryClient(); const { session } = useAuth(); const [active, setActive] = useState<string>(); const [content, setContent] = useState(""); const [otherUserId, setOtherUserId] = useState(""); const [typingIds, setTypingIds] = useState<string[]>([]); const typingTimer = useRef<number | undefined>(undefined);
   const conversations = useQuery({ queryKey: ["chat-conversations"], queryFn: chatApi.conversations });
   useEffect(() => { if (!active && conversations.data?.[0]) setActive(conversations.data[0].id); }, [active, conversations.data]);
@@ -15,11 +17,125 @@ export function ChatPage() {
   const createDirect = async () => { if (!otherUserId.trim()) return; const conversation = await chatApi.direct(otherUserId.trim()); setOtherUserId(""); await client.invalidateQueries({ queryKey: ["chat-conversations"] }); setActive(conversation.id); };
   const orderedMessages = [...(messages.data?.pages.flatMap((page) => page.items) ?? [])].reverse();
   const selected = conversations.data?.find((item) => item.id === active);
-  return <main className="chat-page"><aside className="chat-sidebar"><header><div><span>MESSAGES</span><h1>Chat</h1></div><b>{conversations.data?.reduce((sum, item) => sum + item.unreadCount, 0) ?? 0}</b></header><div className="direct-create"><input value={otherUserId} onChange={(event) => setOtherUserId(event.target.value)} placeholder="User ID for direct message" /><button onClick={() => void createDirect()}>＋</button></div><nav>{conversations.data?.map((conversation) => <ConversationButton key={conversation.id} item={conversation} active={active === conversation.id} onClick={async () => { setActive(conversation.id); if (conversation.lastMessage) await chatApi.read(conversation.id, conversation.lastMessage.id); }} />)}{!conversations.data?.length && <p>No conversations yet.</p>}</nav></aside><section className="chat-thread">
-    {selected ? <><header><div className="chat-avatar">{selected.type === "ProjectChannel" ? "#" : selected.name.slice(0, 1)}</div><div><strong>{selected.name}</strong><small>{selected.type === "ProjectChannel" ? "Project workspace channel" : "Direct conversation"}</small></div></header><div className="chat-messages">{messages.hasNextPage && <button onClick={() => messages.fetchNextPage()}>Load older messages</button>}{orderedMessages.map((message) => <article key={message.id} className={message.sender.id === session?.user.id ? "mine" : ""}><div className="chat-message-avatar">{message.sender.displayName.slice(0, 1)}</div><div><header><b>{message.sender.displayName}</b><time>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></header><p>{message.content}</p>{message.sender.id === session?.user.id && <small>{message.readByUserIds.length > 1 ? "Read" : "Sent"}</small>}</div></article>)}</div><div className="typing-line">{typingIds.length ? `${typingIds.length} ${typingIds.length === 1 ? "person is" : "people are"} typing…` : ""}</div><footer><textarea value={content} onChange={(event) => { setContent(event.target.value); signalRService.startChatTyping(selected.id); if (typingTimer.current) clearTimeout(typingTimer.current); typingTimer.current = window.setTimeout(() => signalRService.stopChatTyping(selected.id), 1000); }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); if (content.trim()) send.mutate(); } }} placeholder={`Message ${selected.name}. Use @username to mention someone.`} /><button disabled={!content.trim() || send.isPending} onClick={() => send.mutate()}>Send</button></footer></> : <div className="empty-state"><h2>Select a conversation</h2><p>Your project channels and direct messages appear here.</p></div>}
-  </section></main>;
+  const unreadCount = conversations.data?.reduce((sum, item) => sum + item.unreadCount, 0) ?? 0;
+
+  return (
+    <main className="chat-page">
+      <aside className="chat-sidebar">
+        <header>
+          <div>
+            <span>{pt("messages")}</span>
+            <h1>Chat</h1>
+          </div>
+          <b aria-label={`${unreadCount} unread`}>{unreadCount}</b>
+        </header>
+
+        <div className="direct-create">
+          <input
+            aria-label={pt("userIdDm")}
+            value={otherUserId}
+            onChange={(event) => setOtherUserId(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && otherUserId.trim()) void createDirect();
+            }}
+            placeholder={pt("userIdDm")}
+          />
+          <button
+            aria-label={pt("userIdDm")}
+            disabled={!otherUserId.trim()}
+            onClick={() => void createDirect()}
+          >
+            ＋
+          </button>
+        </div>
+
+        <nav aria-label={pt("messages")}>
+          {conversations.isPending && (
+            <div className="chat-list-loading" aria-label="Loading">
+              <i /><i /><i />
+            </div>
+          )}
+          {conversations.data?.map((conversation) => (
+            <ConversationButton
+              key={conversation.id}
+              item={conversation}
+              active={active === conversation.id}
+              emptyLabel={pt("noMessages")}
+              onClick={async () => {
+                setActive(conversation.id);
+                if (conversation.lastMessage) await chatApi.read(conversation.id, conversation.lastMessage.id);
+              }}
+            />
+          ))}
+          {!conversations.isPending && !conversations.data?.length && (
+            <div className="chat-list-empty">
+              <span aria-hidden="true">•••</span>
+              <p>{pt("noConversations")}</p>
+            </div>
+          )}
+        </nav>
+      </aside>
+
+      <section className="chat-thread">
+        {selected ? (
+          <>
+            <header>
+              <div className="chat-avatar">{selected.type === "ProjectChannel" ? "#" : selected.name.slice(0, 1)}</div>
+              <div>
+                <strong>{selected.name}</strong>
+                <small>{selected.type === "ProjectChannel" ? pt("projectChannel") : pt("directConversation")}</small>
+              </div>
+            </header>
+            <div className="chat-messages">
+              {messages.hasNextPage && <button className="older-messages" onClick={() => messages.fetchNextPage()}>{pt("olderMessages")}</button>}
+              {orderedMessages.map((message) => (
+                <article key={message.id} className={message.sender.id === session?.user.id ? "mine" : ""}>
+                  <div className="chat-message-avatar">{message.sender.displayName.slice(0, 1)}</div>
+                  <div>
+                    <header><b>{message.sender.displayName}</b><time>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></header>
+                    <p>{message.content}</p>
+                    {message.sender.id === session?.user.id && <small>{message.readByUserIds.length > 1 ? pt("read") : pt("sent")}</small>}
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="typing-line" role="status">{typingIds.length ? `${typingIds.length} ${typingIds.length === 1 ? pt("typingOne") : pt("typingMany")}` : ""}</div>
+            <footer>
+              <textarea
+                aria-label={`${pt("send")}: ${selected.name}`}
+                value={content}
+                onChange={(event) => {
+                  setContent(event.target.value);
+                  signalRService.startChatTyping(selected.id);
+                  if (typingTimer.current) clearTimeout(typingTimer.current);
+                  typingTimer.current = window.setTimeout(() => signalRService.stopChatTyping(selected.id), 1000);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    if (content.trim()) send.mutate();
+                  }
+                }}
+                placeholder={`${pt("send")}: ${selected.name}`}
+              />
+              <button disabled={!content.trim() || send.isPending} onClick={() => send.mutate()}>{pt("send")}</button>
+            </footer>
+          </>
+        ) : (
+          <div className="chat-empty-state">
+            <div className="chat-empty-visual" aria-hidden="true">
+              <span />
+              <span />
+            </div>
+            <h2>{pt("selectConversation")}</h2>
+            <p>{pt("conversationCopy")}</p>
+          </div>
+        )}
+      </section>
+    </main>
+  );
 }
 
-function ConversationButton({ item, active, onClick }: { item: Conversation; active: boolean; onClick: () => void }) {
-  return <button className={active ? "active" : ""} onClick={onClick}><span className="chat-avatar">{item.type === "ProjectChannel" ? "#" : item.name.slice(0, 1)}</span><div><strong>{item.name}</strong><small>{item.lastMessage?.content ?? "No messages yet"}</small></div>{item.unreadCount > 0 && <b>{item.unreadCount}</b>}</button>;
+function ConversationButton({ item, active, emptyLabel, onClick }: { item: Conversation; active: boolean; emptyLabel:string; onClick: () => void }) {
+  return <button className={active ? "active" : ""} onClick={onClick}><span className="chat-avatar">{item.type === "ProjectChannel" ? "#" : item.name.slice(0, 1)}</span><div><strong>{item.name}</strong><small>{item.lastMessage?.content ?? emptyLabel}</small></div>{item.unreadCount > 0 && <b>{item.unreadCount}</b>}</button>;
 }

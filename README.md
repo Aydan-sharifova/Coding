@@ -43,3 +43,18 @@ Secrets must be supplied through environment variables or a production secret ma
 ## SMTP email delivery
 
 SMTP is disabled by default, so development runs log that an email was not delivered without exposing verification or reset tokens. To enable delivery, set the `SMTP_*` values from `.env.example`. Credentials should come from environment variables or a secret manager; never place production passwords in `appsettings.json`.
+
+## AI assistant
+
+The complete assistant workflow works without external credentials through the
+deterministic development provider. To enable model-generated Chat, Explain,
+Find Bug, Fix, Optimize, Tests, and Refactor responses, configure the API
+process with an OpenAI API key:
+
+```bash
+export OpenAI__ApiKey="your-secret-key"
+dotnet run --project src/Coding.Api --urls http://localhost:5192
+```
+
+The key is read only by the Infrastructure layer. Do not add it to
+`appsettings.json`, source control, or frontend environment variables.

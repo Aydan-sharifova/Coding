@@ -39,6 +39,10 @@ services:
       Smtp__FromEmail: ${SMTP_FROM_EMAIL:-}
       Smtp__FromName: ${SMTP_FROM_NAME:-Coding}
       Smtp__ClientBaseUrl: ${FRONTEND_ORIGIN}
+      OpenAI__ApiKey: ${OpenAI__ApiKey:-}
+      OpenAI__Model: ${OpenAI__Model:-gpt-5.6-sol}
+      OpenAI__BaseUrl: ${OpenAI__BaseUrl:-https://api.openai.com/v1/}
+      OpenAI__MaxOutputTokens: ${OpenAI__MaxOutputTokens:-4096}
     ports:
       - "${API_PORT:-8080}:8080"
     depends_on:

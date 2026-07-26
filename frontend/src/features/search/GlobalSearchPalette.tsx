@@ -40,7 +40,7 @@ export function GlobalSearchPalette({ open, onOpenChange }: { open: boolean; onO
   let cursor = -1;
   return <div className="search-palette-backdrop" onMouseDown={() => onOpenChange(false)}>
     <section className="search-palette" role="dialog" aria-modal="true" aria-label="Global search" onMouseDown={(event) => event.stopPropagation()} onKeyDown={keyDown}>
-      <label><Icon name="search" /><input ref={input} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects, files, users and tasks…" /><kbd>ESC</kbd></label>
+      <label htmlFor="global-search"><Icon name="search" /><input id="global-search" ref={input} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects, files, users and tasks…" autoComplete="off" /><kbd>ESC</kbd></label>
       <div className="search-palette-body">
         {query.trim().length < 2 && <div className="recent-searches"><strong>RECENT SEARCHES</strong>{recent.length ? recent.map((item) => <button key={item} onClick={() => setQuery(item)}><Icon name="search" />{item}</button>) : <p>Type at least 2 characters to search.</p>}</div>}
         {search.isFetching && <div className="search-skeleton">{[1, 2, 3].map((item) => <span key={item} />)}</div>}

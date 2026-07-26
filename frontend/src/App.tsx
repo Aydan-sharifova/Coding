@@ -6,6 +6,8 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { useAuth } from "./hooks/useAuth";
 import { RouteErrorBoundary } from "./components/RouteErrorBoundary";
 import { RequireSystemRole } from "./components/RequireSystemRole";
+import { PageSkeleton } from "./components/AsyncState";
+import { ErrorPage } from "./pages/ErrorPage";
 
 const DashboardLayout = lazy(() => import("./layouts/DashboardLayout").then((module) => ({ default: module.DashboardLayout })));
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
@@ -25,7 +27,7 @@ const AdminPage = lazy(() => import("./pages/AdminPage").then((module) => ({ def
 
 function ProtectedDashboard() {
   const { session, isInitializing } = useAuth();
-  if (isInitializing) return <div className="route-loader" role="status">Restoring your session…</div>;
+  if (isInitializing) return <PageSkeleton />;
   return session ? <RouteErrorBoundary><Suspense fallback={<div className="route-loader" role="status">Loading workspace…</div>}><DashboardLayout /></Suspense></RouteErrorBoundary> : <Navigate to="/login" replace />;
 }
 
@@ -35,6 +37,7 @@ export default function App() {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/401" element={<ErrorPage code={401} />} />
       </Route>
       <Route element={<ProtectedDashboard />}>
         <Route path="/dashboard" element={<Suspense fallback={<div className="route-loader" role="status">Loading dashboard…</div>}><DashboardPage /></Suspense>} />
@@ -54,7 +57,9 @@ export default function App() {
         <Route path="/analytics" element={<Suspense fallback={<div className="route-loader" role="status">Loading analytics…</div>}><AnalyticsPage /></Suspense>} />
         <Route path="/invitations/:token" element={<Suspense fallback={<div className="route-loader" role="status">Loading invitation…</div>}><InvitationPage /></Suspense>} />
       </Route>
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="/403" element={<ErrorPage code={403} />} />
+      <Route path="/500" element={<ErrorPage code={500} />} />
+      <Route path="*" element={<ErrorPage code={404} />} />
     </Routes>
   );
 }
