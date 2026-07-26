@@ -12,6 +12,8 @@ public sealed record GetAdminUsersQuery(string? Search, bool? Suspended, string?
 public sealed record GetAdminUserDetailsQuery(Guid UserId) : IRequest<AdminUserDetails>;
 public sealed record SetUserSuspensionCommand(Guid UserId, bool Suspended, string? Reason) : IRequest;
 public sealed record SetSystemRoleCommand(Guid UserId, string Role, bool Enabled) : IRequest;
+public sealed record UpdateAdminUserCommand(Guid UserId, string FirstName, string LastName, string UserName, string Email, string? Bio) : IRequest<AdminUserDetails>;
+public sealed record DeleteAdminUserCommand(Guid UserId, string Reason) : IRequest;
 public sealed record GetAdminProjectsQuery(string? Search, int Page = 1, int PageSize = 25) : IRequest<PageResult<AdminProjectItem>>;
 public sealed record DeleteAbusiveProjectCommand(Guid ProjectId, string Reason) : IRequest;
 public sealed record GetPlatformStatisticsQuery : IRequest<PlatformStatistics>;

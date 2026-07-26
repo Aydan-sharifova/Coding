@@ -27,42 +27,57 @@ public sealed class GetAnalyticsDashboardHandler(AppDbContext db, ICurrentUser c
         var completedTasks = await tasks.CountAsync(x => x.Status == ProjectTaskStatus.Done, ct);
         var totalTasks = await tasks.CountAsync(ct);
 
-        var activeUsers = await activity.Where(x => x.UserId.HasValue)
-            .GroupBy(x => new { x.UserId, x.User!.FirstName, x.User.LastName, x.User.UserName, x.User.AvatarUrl })
-            .Select(x => new ActiveUserDto(x.Key.UserId!.Value, x.Key.FirstName + " " + x.Key.LastName, x.Key.UserName, x.Key.AvatarUrl, x.Count()))
+        var activeUserCounts = await activity.Where(x => x.UserId.HasValue)
+            .GroupBy(x => x.UserId!.Value)
+            .Select(x => new { UserId = x.Key, ActivityCount = x.Count() })
             .OrderByDescending(x => x.ActivityCount).Take(10).ToListAsync(ct);
+        var activeUserIds = activeUserCounts.Select(x => x.UserId).ToList();
+        var activeUserProfiles = await db.Users.AsNoTracking().Where(x => activeUserIds.Contains(x.ID))
+            .Select(x => new { x.ID, x.FirstName, x.LastName, x.UserName, x.AvatarUrl }).ToListAsync(ct);
+        var activeUsers = activeUserCounts.Join(activeUserProfiles, count => count.UserId, user => user.ID,
+            (count, user) => new ActiveUserDto(user.ID, user.FirstName + " " + user.LastName, user.UserName, user.AvatarUrl, count.ActivityCount)).ToList();
 
-        var projectsOverTime = await db.Projects.AsNoTracking()
+        var projectCreatedDates = await db.Projects.AsNoTracking()
             .Where(x => memberProjects.Contains(x.ID) && x.CreatedAt >= from && x.CreatedAt <= to)
-            .GroupBy(x => x.CreatedAt.Date)
+            .Select(x => x.CreatedAt)
+            .ToListAsync(ct);
+        var projectsOverTime = projectCreatedDates
+            .GroupBy(x => x.Date)
             .Select(x => new TimeSeriesPointDto(x.Key, x.Count()))
-            .OrderBy(x => x.Period).ToListAsync(ct);
+            .OrderBy(x => x.Period)
+            .ToList();
 
-        var languages = await db.Projects.AsNoTracking()
+        var projectLanguages = await db.Projects.AsNoTracking()
             .Where(x => memberProjects.Contains(x.ID))
-            .GroupBy(x => x.DefaultLanguage)
-            .Select(x => new LanguageUsageDto(x.Key == "" ? "Other" : x.Key, x.Count()))
-            .OrderByDescending(x => x.ProjectCount).Take(8).ToListAsync(ct);
+            .Select(x => x.DefaultLanguage)
+            .ToListAsync(ct);
+        var languages = projectLanguages
+            .GroupBy(x => string.IsNullOrWhiteSpace(x) ? "Other" : x, StringComparer.OrdinalIgnoreCase)
+            .Select(x => new LanguageUsageDto(x.Key, x.Count()))
+            .OrderByDescending(x => x.ProjectCount).Take(8).ToList();
 
-        var weekly = await activity
-            .GroupBy(x => x.CreatedAt.Date)
+        var activityDates = await activity.Select(x => x.CreatedAt).ToListAsync(ct);
+        var weekly = activityDates
+            .GroupBy(x => x.Date)
             .Select(x => new TimeSeriesPointDto(x.Key, x.Count()))
-            .OrderBy(x => x.Period).ToListAsync(ct);
+            .OrderBy(x => x.Period).ToList();
 
-        var monthly = await activity
-            .GroupBy(x => new { x.CreatedAt.Year, x.CreatedAt.Month })
+        var monthly = activityDates
+            .GroupBy(x => new { x.Year, x.Month })
             .Select(x => new TimeSeriesPointDto(new DateTime(x.Key.Year, x.Key.Month, 1, 0, 0, 0, DateTimeKind.Utc), x.Count()))
-            .OrderBy(x => x.Period).ToListAsync(ct);
+            .OrderBy(x => x.Period).ToList();
 
         var fileChanges = await db.FileVersions.AsNoTracking()
             .CountAsync(x => memberProjects.Contains(x.Node.ProjectId) && x.CreatAt >= from && x.CreatAt <= to, ct);
         var projectsCreated = await db.Projects.AsNoTracking()
             .CountAsync(x => memberProjects.Contains(x.ID) && x.CreatedAt >= from && x.CreatedAt <= to, ct);
-        var sessionMinutes = await db.CodingSessions.AsNoTracking()
+        var sessionRanges = await db.CodingSessions.AsNoTracking()
             .Where(x => memberProjects.Contains(x.ProjectId) && x.StartAt <= to && (x.EndAt == null || x.EndAt >= from))
-            .SumAsync(x => (double?)Math.Min(
-                ((x.EndAt ?? x.LastActivityAt) - x.StartAt).TotalMinutes,
-                30), ct) ?? 0;
+            .Select(x => new { x.StartAt, x.EndAt, x.LastActivityAt })
+            .ToListAsync(ct);
+        var sessionMinutes = sessionRanges.Sum(x => Math.Min(
+            ((x.EndAt ?? x.LastActivityAt) - x.StartAt).TotalMinutes,
+            30));
 
         return new AnalyticsDashboardDto(from, to,
             new AnalyticsSummaryDto(

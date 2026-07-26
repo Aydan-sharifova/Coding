@@ -12,6 +12,7 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
+    EnvironmentFile.LoadForDevelopment(Directory.GetCurrentDirectory());
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Host.UseSerilog((context, services, logger) => logger
@@ -54,6 +55,8 @@ try
         {
             options.SwaggerEndpoint("/swagger/v1/swagger.json", "Coding API v1");
             options.DisplayRequestDuration();
+            options.EnablePersistAuthorization();
+            options.InjectStylesheet("/swagger-ui/custom.css");
         });
     }
 

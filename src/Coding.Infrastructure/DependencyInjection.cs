@@ -11,6 +11,8 @@ using Coding.Application.Features.Activities;
 using Coding.Infrastructure.Activities;
 using Coding.Application.Features.UserSettings;
 using Coding.Infrastructure.UserSettings;
+using Coding.Application.Features.AiAssistant;
+using Coding.Infrastructure.AiAssistant;
 
 namespace Coding.Infrastructure;
 
@@ -54,6 +56,24 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IActivityLogger, ActivityLogger>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        services.AddOptions<OpenAiOptions>()
+            .Bind(configuration.GetSection(OpenAiOptions.SectionName));
+        services.AddHttpClient<OpenAiProvider>(client =>
+            client.Timeout = Timeout.InfiniteTimeSpan);
+        services.AddScoped<DevelopmentAiProvider>();
+        services.AddScoped<IAiProvider>(provider =>
+        {
+            var options = provider
+                .GetRequiredService<Microsoft.Extensions.Options.IOptions<OpenAiOptions>>()
+                .Value;
+            return options.IsConfigured
+                ? provider.GetRequiredService<OpenAiProvider>()
+                : provider.GetRequiredService<DevelopmentAiProvider>();
+        });
+        services.AddScoped<IAiContextBuilder, AiContextBuilder>();
+        services.AddScoped<IAiPromptTemplateService, AiPromptTemplateService>();
+        services.AddScoped<IAiUsageTracker, AiUsageTracker>();
+        services.AddScoped<IAiConversationService, AiConversationService>();
 
         return services;
     }

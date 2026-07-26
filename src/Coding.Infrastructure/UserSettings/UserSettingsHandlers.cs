@@ -36,6 +36,7 @@ public sealed class UpdatePreferencesHandler(AppDbContext db, ICurrentUser curre
     public async Task<UserPreferenceDto> Handle(UpdatePreferencesCommand r, CancellationToken ct)
     {
         if (!new[] { "light", "dark", "system" }.Contains(r.Theme)) throw new InvalidOperationException("Unsupported theme.");
+        if (!new[] { "en", "az", "ru", "de", "tr" }.Contains(r.Language.Trim().ToLowerInvariant())) throw new InvalidOperationException("Unsupported language.");
         var item = await db.UserPreferences.SingleOrDefaultAsync(x => x.UserId == current.UserId, ct) ?? new UserPreference { UserId = current.UserId };
         if (db.Entry(item).State == EntityState.Detached) db.UserPreferences.Add(item);
         item.Theme = r.Theme; item.Language = r.Language.Trim().ToLowerInvariant(); item.ReducedMotion = r.ReducedMotion; item.CompactMode = r.CompactMode; item.SecurityAlertsEnabled = r.SecurityAlertsEnabled; item.UpdatedAt = DateTime.UtcNow; await db.SaveChangesAsync(ct);

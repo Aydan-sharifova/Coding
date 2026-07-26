@@ -54,11 +54,51 @@ public sealed class SetSystemRoleHandler(AppDbContext db, ICurrentUser current, 
     {
         if (!await AdminAccess.IsSuperAdmin(db, current.UserId, ct)) throw new UnauthorizedAccessException("Only SuperAdmin may manage system roles.");
         if (!SystemRoles.All.Contains(r.Role)) throw new InvalidOperationException("This role is not a permitted system role.");
+        if (!r.Enabled && r.Role == SystemRoles.SuperAdmin)
+        {
+            if (r.UserId == current.UserId) throw new InvalidOperationException("You cannot remove your own SuperAdmin role.");
+            var count = await db.UserRoles.CountAsync(x => x.Role.Name == SystemRoles.SuperAdmin && !x.User.IsDeleted, ct);
+            if (count <= 1) throw new InvalidOperationException("The last SuperAdmin role cannot be removed.");
+        }
         var role = await db.Roles.SingleAsync(x => x.Name == r.Role, ct); var assignment = await db.UserRoles.SingleOrDefaultAsync(x => x.UserId == r.UserId && x.RoleId == role.ID, ct);
         if (r.Enabled && assignment is null) db.UserRoles.Add(new UserRole { ID = Guid.NewGuid(), UserId = r.UserId, RoleId = role.ID });
         if (!r.Enabled && assignment is not null) db.UserRoles.Remove(assignment);
         await db.SaveChangesAsync(ct);
         await audit.LogAsync(new(current.UserId, null, r.Enabled ? "SystemRoleGranted" : "SystemRoleRevoked", nameof(User), r.UserId, $"{r.Role} role {(r.Enabled ? "granted" : "revoked")}."), ct);
+    }
+}
+public sealed class UpdateAdminUserHandler(AppDbContext db, ICurrentUser current, IActivityLogger audit) : IRequestHandler<UpdateAdminUserCommand, AdminUserDetails>
+{
+    public async Task<AdminUserDetails> Handle(UpdateAdminUserCommand r, CancellationToken ct)
+    {
+        if (!await AdminAccess.IsSuperAdmin(db, current.UserId, ct)) throw new UnauthorizedAccessException("Only SuperAdmin may edit users.");
+        var email = r.Email.Trim().ToLowerInvariant(); var userName = r.UserName.Trim();
+        if (await db.Users.AnyAsync(x => x.ID != r.UserId && (x.Email.ToLower() == email || x.UserName.ToLower() == userName.ToLower()), ct))
+            throw new InvalidOperationException("Email or username is already in use.");
+        var user = await db.Users.SingleOrDefaultAsync(x => x.ID == r.UserId, ct) ?? throw new KeyNotFoundException("User was not found.");
+        user.FirstName = r.FirstName.Trim(); user.LastName = r.LastName.Trim(); user.UserName = userName; user.Email = email; user.Bio = r.Bio?.Trim(); user.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        await audit.LogAsync(new(current.UserId, null, "AdminUserUpdated", nameof(User), user.ID, "SuperAdmin updated a user account.", new Dictionary<string, object?> { ["userName"] = user.UserName, ["email"] = user.Email }), ct);
+        return await db.Users.AsNoTracking().Where(x => x.ID == user.ID).Select(x => new AdminUserDetails(x.ID, x.FirstName, x.LastName, x.UserName, x.Email, x.Bio, x.AvatarUrl, x.IsSuspended, x.SuspensionReason, x.UserRoles.Select(ur => ur.Role.Name).ToList(), x.ProjectMembers.Count, x.CreatedAt, x.LastSeen)).SingleAsync(ct);
+    }
+}
+public sealed class DeleteAdminUserHandler(AppDbContext db, ICurrentUser current, IActivityLogger audit) : IRequestHandler<DeleteAdminUserCommand>
+{
+    public async Task Handle(DeleteAdminUserCommand r, CancellationToken ct)
+    {
+        if (!await AdminAccess.IsSuperAdmin(db, current.UserId, ct)) throw new UnauthorizedAccessException("Only SuperAdmin may delete users.");
+        if (r.UserId == current.UserId) throw new InvalidOperationException("You cannot delete your own account.");
+        if (string.IsNullOrWhiteSpace(r.Reason)) throw new InvalidOperationException("A deletion reason is required.");
+        var user = await db.Users.Include(x => x.UserRoles).ThenInclude(x => x.Role).SingleOrDefaultAsync(x => x.ID == r.UserId && !x.IsDeleted, ct) ?? throw new KeyNotFoundException("User was not found.");
+        if (user.UserRoles.Any(x => x.Role.Name == SystemRoles.SuperAdmin))
+        {
+            var superAdminCount = await db.UserRoles.CountAsync(x => x.Role.Name == SystemRoles.SuperAdmin && !x.User.IsDeleted, ct);
+            if (superAdminCount <= 1) throw new InvalidOperationException("The last SuperAdmin cannot be deleted.");
+        }
+        user.IsDeleted = true; user.DeletedAt = DateTime.UtcNow; user.IsSuspended = true; user.SuspendedAt = DateTime.UtcNow; user.SuspensionReason = r.Reason.Trim();
+        await db.RefreshTokens.Where(x => x.UserId == user.ID && !x.IsRevoked).ExecuteUpdateAsync(x => x.SetProperty(t => t.IsRevoked, true), ct);
+        await db.SaveChangesAsync(ct);
+        await audit.LogAsync(new(current.UserId, null, "AdminUserDeleted", nameof(User), user.ID, "SuperAdmin soft-deleted a user account.", new Dictionary<string, object?> { ["reason"] = r.Reason }), ct);
     }
 }
 public sealed class GetAdminProjectsHandler(AppDbContext db) : IRequestHandler<GetAdminProjectsQuery, PageResult<AdminProjectItem>>

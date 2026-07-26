@@ -1,0 +1,19 @@
+/* OpenAPI response links are not used by this API. Hiding the empty column keeps
+   response documentation focused on status codes and descriptions. */
+.responses-table .response-col_links,
+.responses-table th.response-col_links {
+    display: none !important;
+}
+
+.responses-table .response-col_description {
+    width: auto !important;
+}
+
+.auth-wrapper .authorize {
+    border-color: #5b4ff0 !important;
+    color: #5b4ff0 !important;
+}
+
+.auth-wrapper .authorize svg {
+    fill: #5b4ff0 !important;
+}
