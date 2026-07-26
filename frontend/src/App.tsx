@@ -1,14 +1,14 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthLayout } from "./layouts/AuthLayout";
-import { LoginPage } from "./pages/LoginPage";
-import { RegisterPage } from "./pages/RegisterPage";
 import { useAuth } from "./hooks/useAuth";
 import { RouteErrorBoundary } from "./components/RouteErrorBoundary";
 import { RequireSystemRole } from "./components/RequireSystemRole";
 import { PageSkeleton } from "./components/AsyncState";
-import { ErrorPage } from "./pages/ErrorPage";
 
+const LoginPage = lazy(() => import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })));
+const RegisterPage = lazy(() => import("./pages/RegisterPage").then((module) => ({ default: module.RegisterPage })));
+const ErrorPage = lazy(() => import("./pages/ErrorPage").then((module) => ({ default: module.ErrorPage })));
 const DashboardLayout = lazy(() => import("./layouts/DashboardLayout").then((module) => ({ default: module.DashboardLayout })));
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const ProjectsPage = lazy(() => import("./pages/ProjectsPage").then((module) => ({ default: module.ProjectsPage })));
@@ -35,9 +35,9 @@ export default function App() {
   return (
     <Routes>
       <Route element={<AuthLayout />}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/401" element={<ErrorPage code={401} />} />
+        <Route path="/login" element={<Suspense fallback={<PageSkeleton />}><LoginPage /></Suspense>} />
+        <Route path="/register" element={<Suspense fallback={<PageSkeleton />}><RegisterPage /></Suspense>} />
+        <Route path="/401" element={<Suspense fallback={<PageSkeleton />}><ErrorPage code={401} /></Suspense>} />
       </Route>
       <Route element={<ProtectedDashboard />}>
         <Route path="/dashboard" element={<Suspense fallback={<div className="route-loader" role="status">Loading dashboard…</div>}><DashboardPage /></Suspense>} />
@@ -57,9 +57,9 @@ export default function App() {
         <Route path="/analytics" element={<Suspense fallback={<div className="route-loader" role="status">Loading analytics…</div>}><AnalyticsPage /></Suspense>} />
         <Route path="/invitations/:token" element={<Suspense fallback={<div className="route-loader" role="status">Loading invitation…</div>}><InvitationPage /></Suspense>} />
       </Route>
-      <Route path="/403" element={<ErrorPage code={403} />} />
-      <Route path="/500" element={<ErrorPage code={500} />} />
-      <Route path="*" element={<ErrorPage code={404} />} />
+      <Route path="/403" element={<Suspense fallback={<PageSkeleton />}><ErrorPage code={403} /></Suspense>} />
+      <Route path="/500" element={<Suspense fallback={<PageSkeleton />}><ErrorPage code={500} /></Suspense>} />
+      <Route path="*" element={<Suspense fallback={<PageSkeleton />}><ErrorPage code={404} /></Suspense>} />
     </Routes>
   );
 }

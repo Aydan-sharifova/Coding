@@ -11,5 +11,9 @@
 **/obj/
 **/node_modules/
 **/dist/
+**/coverage/
+**/TestResults/
+**/playwright-report/
+**/test-results/
 *.user
 *.suo

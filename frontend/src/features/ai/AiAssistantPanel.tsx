@@ -9,10 +9,13 @@ interface AiAssistantPanelProps {
   language?: string;
   selectedCode?: string;
   fileContent?: string;
+  contextText?: string;
+  contextLabel?: string;
   onApplySuggestion: (content: string) => void;
 }
 
 const actions: Array<{ action: AiAction; label: string }> = [
+  { action: "GenerateCode", label: "Generate" },
   { action: "Explain", label: "Explain" },
   { action: "FindBug", label: "Find bug" },
   { action: "SuggestFix", label: "Fix" },
@@ -28,6 +31,8 @@ export function AiAssistantPanel({
   language,
   selectedCode,
   fileContent,
+  contextText,
+  contextLabel,
   onApplySuggestion,
 }: AiAssistantPanelProps) {
   const [messages, setMessages] = useState<AiMessage[]>([]);
@@ -50,7 +55,7 @@ export function AiAssistantPanel({
   const submit = async (action: AiAction, explicitMessage?: string) => {
     const userMessage = (explicitMessage ?? message).trim();
     if (!userMessage && !selectedCode && action === "Chat") return;
-    if (!userMessage && !selectedCode && !fileId) return;
+    if (!userMessage && !selectedCode && !fileId && !contextText) return;
     controller.current?.abort();
     controller.current = new AbortController();
     setStreaming(true);
@@ -60,7 +65,9 @@ export function AiAssistantPanel({
     const user: AiMessage = {
       id: crypto.randomUUID(),
       role: "User",
-      content: userMessage || `${action} the ${selectedCode ? "selected code" : "current file"}.`,
+      content: userMessage || `${action} using the ${
+        selectedCode ? "selected code" : contextText ? "available project context" : "current file"
+      }.`,
       action,
       fileId,
       createdAt: new Date().toISOString(),
@@ -76,7 +83,9 @@ export function AiAssistantPanel({
         conversationId,
         currentFileId: fileId,
         selectedCode,
-        neighboringCode: selectedCode ? fileContent?.slice(0, 4_000) : undefined,
+        neighboringCode: selectedCode
+          ? fileContent?.slice(0, 4_000)
+          : contextText?.slice(0, 4_000),
         programmingLanguage: language,
       }, controller.current.signal, (chunk) => {
         if (chunk.conversationId) setConversationId(chunk.conversationId);
@@ -94,7 +103,7 @@ export function AiAssistantPanel({
   };
 
   const lastAssistant = [...messages].reverse().find((item) => item.role === "Assistant" && item.content);
-  const hasContext = Boolean(fileId || selectedCode || fileContent);
+  const hasContext = Boolean(fileId || selectedCode || fileContent || contextText);
   return (
     <section className="ai-assistant-panel" aria-label="AI assistant">
       <header>
@@ -113,14 +122,19 @@ export function AiAssistantPanel({
         ))}
       </div>
 
-      {selectedCode && <div className="ai-context-chip"><span>Selected code</span><b>{selectedCode.length} chars</b></div>}
+      {(selectedCode || contextText) && (
+        <div className="ai-context-chip">
+          <span>{selectedCode ? "Selected code" : contextLabel ?? "Project context"}</span>
+          <b>{(selectedCode ?? contextText ?? "").length} chars</b>
+        </div>
+      )}
 
       <div className="ai-messages" aria-live="polite">
         {!messages.length && (
           <div className="ai-welcome">
             <span>✦</span>
             <strong>Ask about your code</strong>
-            <p>Select code in Monaco, then explain, fix, optimize, refactor, or generate tests.</p>
+            <p>Generate, explain, fix, optimize, refactor, test, or ask about project context.</p>
           </div>
         )}
         {messages.map((item) => (

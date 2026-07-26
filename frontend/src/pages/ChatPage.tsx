@@ -1,21 +1,26 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { chatApi } from "../features/chat/api";
 import type { Conversation } from "../features/chat/types";
 import { signalRService } from "../features/collaboration/signalRService";
 import { useAuth } from "../hooks/useAuth";
 import { usePageTranslation } from "../hooks/usePageTranslation";
+import { Dialog } from "../components/ui/Dialog";
+import { AiAssistantPanel } from "../features/ai/AiAssistantPanel";
 
 export function ChatPage() {
   const { pt } = usePageTranslation();
-  const client = useQueryClient(); const { session } = useAuth(); const [active, setActive] = useState<string>(); const [content, setContent] = useState(""); const [otherUserId, setOtherUserId] = useState(""); const [typingIds, setTypingIds] = useState<string[]>([]); const typingTimer = useRef<number | undefined>(undefined);
+  const client = useQueryClient(); const { session } = useAuth(); const [active, setActive] = useState<string>(); const [content, setContent] = useState(""); const [otherUserId, setOtherUserId] = useState(""); const [typingIds, setTypingIds] = useState<string[]>([]); const [aiOpen, setAiOpen] = useState(false); const typingTimer = useRef<number | undefined>(undefined);
   const conversations = useQuery({ queryKey: ["chat-conversations"], queryFn: chatApi.conversations });
   useEffect(() => { if (!active && conversations.data?.[0]) setActive(conversations.data[0].id); }, [active, conversations.data]);
   const messages = useInfiniteQuery({ queryKey: ["chat-messages", active], enabled: Boolean(active), queryFn: ({ pageParam }) => chatApi.messages(active!, pageParam), initialPageParam: undefined as string | undefined, getNextPageParam: (page) => page.nextCursor });
   useEffect(() => { if (!active) return; void signalRService.joinConversation(active); const offMessage = signalRService.onMessage((message) => { if (message.conversationId === active) void messages.refetch(); void conversations.refetch(); }); const offUpdated = signalRService.onConversationUpdated(() => void conversations.refetch()); const offTyping = signalRService.onChatTyping((event) => { if (event.conversationId === active) setTypingIds((ids) => event.typing ? [...new Set([...ids, event.userId])] : ids.filter((id) => id !== event.userId)); }); return () => { offMessage(); offUpdated(); offTyping(); void signalRService.leaveConversation(active); }; }, [active]);
   const send = useMutation({ mutationFn: () => chatApi.send(active!, content), onSuccess: async () => { setContent(""); signalRService.stopChatTyping(active!); await messages.refetch(); await conversations.refetch(); } });
   const createDirect = async () => { if (!otherUserId.trim()) return; const conversation = await chatApi.direct(otherUserId.trim()); setOtherUserId(""); await client.invalidateQueries({ queryKey: ["chat-conversations"] }); setActive(conversation.id); };
-  const orderedMessages = [...(messages.data?.pages.flatMap((page) => page.items) ?? [])].reverse();
+  const orderedMessages = useMemo(
+    () => [...(messages.data?.pages.flatMap((page) => page.items) ?? [])].reverse(),
+    [messages.data?.pages],
+  );
   const selected = conversations.data?.find((item) => item.id === active);
   const unreadCount = conversations.data?.reduce((sum, item) => sum + item.unreadCount, 0) ?? 0;
 
@@ -85,6 +90,11 @@ export function ChatPage() {
                 <strong>{selected.name}</strong>
                 <small>{selected.type === "ProjectChannel" ? pt("projectChannel") : pt("directConversation")}</small>
               </div>
+              {selected.projectId && (
+                <button className="chat-ai-button" onClick={() => setAiOpen(true)}>
+                  ✦ Ask AI
+                </button>
+              )}
             </header>
             <div className="chat-messages">
               {messages.hasNextPage && <button className="older-messages" onClick={() => messages.fetchNextPage()}>{pt("olderMessages")}</button>}
@@ -120,6 +130,27 @@ export function ChatPage() {
               />
               <button disabled={!content.trim() || send.isPending} onClick={() => send.mutate()}>{pt("send")}</button>
             </footer>
+            {selected.projectId && (
+              <Dialog
+                open={aiOpen}
+                title="AI coding assistant"
+                description={`Project channel: ${selected.name}`}
+                onClose={() => setAiOpen(false)}
+              >
+                <div className="project-ai-dialog chat-ai-dialog">
+                  <AiAssistantPanel
+                    projectId={selected.projectId}
+                    fileName={selected.name}
+                    contextLabel="Recent channel messages"
+                    contextText={orderedMessages
+                      .slice(-20)
+                      .map((item) => `${item.sender.displayName}: ${item.content}`)
+                      .join("\n")}
+                    onApplySuggestion={() => undefined}
+                  />
+                </div>
+              </Dialog>
+            )}
           </>
         ) : (
           <div className="chat-empty-state">

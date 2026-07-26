@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { Icon, type IconName } from "../components/Icon";
 import { useAuth } from "../hooks/useAuth";
@@ -23,8 +23,13 @@ const navItems: Array<{ label: TranslationKey; path: string; icon: IconName }> =
 
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [topbarAccountOpen, setTopbarAccountOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const topbarAccountRef = useRef<HTMLDivElement>(null);
   const [searchOpen, setSearchOpen] = useState(false); const [createOpen, setCreateOpen] = useState(false);
-  const { session } = useAuth();
+  const { session, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { t } = useLanguage();
   const { pt } = usePageTranslation();
@@ -32,7 +37,41 @@ export function DashboardLayout() {
   const user = session?.user;
   const initials = user ? `${user.firstName[0]}${user.lastName[0]}` : "AD";
   useEffect(() => { const shortcut = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); window.setTimeout(() => document.getElementById("global-search")?.focus(), 0); } }; window.addEventListener("keydown", shortcut); return () => window.removeEventListener("keydown", shortcut); }, []);
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (!accountMenuRef.current?.contains(event.target as Node))
+        setAccountMenuOpen(false);
+      if (!topbarAccountRef.current?.contains(event.target as Node))
+        setTopbarAccountOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setAccountMenuOpen(false);
+        setTopbarAccountOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
   const create = async (input: ProjectInput) => { try { const project = await createProject.mutateAsync(input); setCreateOpen(false); show("Project created successfully."); navigate(`/projects/${project.id}/workspace`); } catch (error) { show(error instanceof Error ? error.message : "Project creation failed.", "error"); } };
+  const signOut = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      show(pt("signedOut"));
+      navigate("/login", { replace: true });
+    } catch (error) {
+      show(error instanceof Error ? error.message : "Logout failed.", "error");
+    } finally {
+      setLoggingOut(false);
+      setAccountMenuOpen(false);
+    }
+  };
 
   return (
     <div className="dashboard-shell">
@@ -47,7 +86,33 @@ export function DashboardLayout() {
           <NavLink to="/help"><Icon name="help" />{t("help")}</NavLink>
         </nav>
         <div className="sidebar-upgrade"><span><Icon name="trend" /></span><strong>{pt("unlockInsights")}</strong><p>{pt("upgradeWorkspace")}</p><button>{pt("viewPlans")}</button></div>
-        <div className="sidebar-user"><span className="avatar">{initials}</span><div><strong>{user ? `${user.firstName} ${user.lastName}` : "Alex Developer"}</strong><small>{user?.email ?? "alex@coding.dev"}</small></div><Icon name="chevron" /></div>
+        <div className="sidebar-account" ref={accountMenuRef}>
+          {accountMenuOpen && (
+            <div className="account-menu" role="menu" aria-label={pt("accountMenu")}>
+              <button role="menuitem" onClick={() => { setAccountMenuOpen(false); navigate("/settings?section=profile"); }}>
+                <Icon name="team" />{t("profile")}
+              </button>
+              <button role="menuitem" onClick={() => { setAccountMenuOpen(false); navigate("/settings"); }}>
+                <Icon name="settings" />{t("settings")}
+              </button>
+              <span />
+              <button className="danger" role="menuitem" disabled={loggingOut} onClick={() => void signOut()}>
+                <Icon name="activity" />{loggingOut ? `${pt("logout")}…` : pt("logout")}
+              </button>
+            </div>
+          )}
+          <button
+            className="sidebar-user"
+            aria-label={pt("accountMenu")}
+            aria-haspopup="menu"
+            aria-expanded={accountMenuOpen}
+            onClick={() => setAccountMenuOpen((open) => !open)}
+          >
+            <span className="avatar">{initials}</span>
+            <span><strong>{user ? `${user.firstName} ${user.lastName}` : "Alex Developer"}</strong><small>{user?.email ?? "alex@coding.dev"}</small></span>
+            <Icon name="chevron" />
+          </button>
+        </div>
       </aside>
       {sidebarOpen && <button className="sidebar-backdrop" aria-label={t("closeNavigation")} onClick={() => setSidebarOpen(false)} />}
       <div className="dashboard-main">
@@ -58,6 +123,27 @@ export function DashboardLayout() {
             <button className="icon-button" onClick={toggleTheme} aria-label={t("theme")}><Icon name={theme === "dark" ? "sun" : "moon"} /></button>
             <NotificationBell />
             <button className="create-button" onClick={() => setCreateOpen(true)}><Icon name="plus" /> {t("newProject")}</button>
+            <div className="topbar-account" ref={topbarAccountRef}>
+              <button
+                className="topbar-avatar"
+                aria-label={pt("accountMenu")}
+                aria-haspopup="menu"
+                aria-expanded={topbarAccountOpen}
+                onClick={() => setTopbarAccountOpen((open) => !open)}
+              >
+                {initials}
+                <Icon name="chevron" />
+              </button>
+              {topbarAccountOpen && (
+                <div className="account-menu topbar-account-menu" role="menu" aria-label={pt("accountMenu")}>
+                  <header><strong>{user ? `${user.firstName} ${user.lastName}` : ""}</strong><small>{user?.email}</small></header>
+                  <button role="menuitem" onClick={() => { setTopbarAccountOpen(false); navigate("/settings?section=profile"); }}><Icon name="team" />{t("profile")}</button>
+                  <button role="menuitem" onClick={() => { setTopbarAccountOpen(false); navigate("/settings"); }}><Icon name="settings" />{t("settings")}</button>
+                  <span />
+                  <button className="danger" role="menuitem" disabled={loggingOut} onClick={() => void signOut()}><Icon name="activity" />{loggingOut ? `${pt("logout")}…` : pt("logout")}</button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <Outlet />

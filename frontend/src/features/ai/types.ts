@@ -1,4 +1,4 @@
-export type AiAction = "Chat" | "Explain" | "FindBug" | "SuggestFix" | "Optimize" | "GenerateTests" | "Refactor";
+export type AiAction = "Chat" | "Explain" | "FindBug" | "SuggestFix" | "Optimize" | "GenerateTests" | "Refactor" | "GenerateCode";
 
 export interface AiAssistantRequest {
   projectId: string;
