@@ -1,5 +1,12 @@
 export type AiAction = "Chat" | "Explain" | "FindBug" | "SuggestFix" | "Optimize" | "GenerateTests" | "Refactor" | "GenerateCode";
 
+export interface AiAttachmentRequest {
+  fileName: string;
+  mediaType: string;
+  content: string;
+  isImage: boolean;
+}
+
 export interface AiAssistantRequest {
   projectId: string;
   userMessage: string;
@@ -10,6 +17,7 @@ export interface AiAssistantRequest {
   neighboringCode?: string;
   programmingLanguage?: string;
   referencedFileIds?: string[];
+  attachments?: AiAttachmentRequest[];
 }
 
 export interface AiStreamChunk {
@@ -36,6 +44,7 @@ export interface AiMessage {
   content: string;
   action?: AiAction;
   fileId?: string;
+  attachmentNames?: string[];
   createdAt: string;
 }
 

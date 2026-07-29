@@ -1,12 +1,12 @@
 ﻿<Properties StartupConfiguration="{E922C6EC-4C3F-4919-A216-7B43E4DE5F00}|https">
+  <MonoDevelop.Ide.ItemProperties.Coding.Application FirstBuild="True" />
+  <MonoDevelop.Ide.ItemProperties.src.Coding.Api PreferredExecutionTarget="/Applications/Google Chrome.app" />
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.ItemProperties.Coding PreferredExecutionTarget="/Applications/Google Chrome.app" />
+  <MultiItemStartupConfigurations />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
-  <MonoDevelop.Ide.ItemProperties.src.Coding.Api PreferredExecutionTarget="/Applications/Google Chrome.app" />
-  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
-  <MultiItemStartupConfigurations />
-  <MonoDevelop.Ide.ItemProperties.Coding.Application FirstBuild="True" />
-  <MonoDevelop.Ide.ItemProperties.Coding PreferredExecutionTarget="/Applications/Google Chrome.app" />
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
   <MonoDevelop.Ide.Workbench ActiveDocument="src/Coding.Api/appsettings.json">
     <Files>
@@ -49,7 +49,7 @@
       <File FileName="src/Coding.Application/Services/Interfaces/IRoleService.cs" />
       <File FileName="src/Coding.Domain/Models/AIRequest.cs" />
       <File FileName="src/Coding.Domain/Models/User.cs" />
-      <File FileName="src/Coding.Api/appsettings.json" Line="15" Column="30" />
+      <File FileName="src/Coding.Api/appsettings.json" Line="50" Column="28" />
       <File FileName="src/Coding.Api/Properties/launchSettings.json" />
       <File FileName="src/Coding.Api/Controllers/NotificationController.cs" />
       <File FileName="src/Coding.Api/Configuration/SwaggerAuthorizationOperationFilter.cs" />
@@ -70,12 +70,8 @@
       <Pad Id="ProjectPad">
         <State name="__root__">
           <Node name="Coding" expanded="True">
-            <Node name="src" expanded="True">
-              <Node name="Coding.Api">
-                <Node name="Controllers" expanded="True" />
-                <Node name="appsettings.json" selected="True" />
-              </Node>
-            </Node>
+            <Node name="src" expanded="True" />
+            <Node name="Coding.UnitTests" selected="True" />
           </Node>
         </State>
       </Pad>

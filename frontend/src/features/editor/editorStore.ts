@@ -11,7 +11,7 @@ interface EditorState {
 }
 
 export const useEditorStore = create<EditorState>()(persist((set, get) => ({
-  tabs: {}, openTabIds: [], closedTabHistory: [], fontSize: 14, leftWidth: 272, rightWidth: 288, rightPanelVisible: true,
+  tabs: {}, openTabIds: [], closedTabHistory: [], fontSize: 14, leftWidth: 272, rightWidth: 360, rightPanelVisible: true,
   openTab: (input) => set((state) => state.tabs[input.id] ? { activeTabId: input.id } : { tabs: { ...state.tabs, [input.id]: { ...input, status: "Saved", requestVersion: 0, acknowledgedVersion: 0, suppressAutoSave: false, cursor: { lineNumber: 1, column: 1 } } }, openTabIds: [...state.openTabIds, input.id], activeTabId: input.id }),
   activateTab: (id) => { if (get().tabs[id]) set({ activeTabId: id }); },
   updateContent: (id, content) => set((state) => ({ tabs: { ...state.tabs, [id]: { ...state.tabs[id], content, status: content === state.tabs[id].savedContent ? "Saved" : "Unsaved", suppressAutoSave: false, requestVersion: state.tabs[id].requestVersion + 1 } } })),
@@ -24,4 +24,20 @@ export const useEditorStore = create<EditorState>()(persist((set, get) => ({
   discardChanges: (id) => set((state) => ({ tabs: { ...state.tabs, [id]: { ...state.tabs[id], content: state.tabs[id].savedContent, status: "Saved" } } })),
   setViewState: (id, viewState) => set((state) => ({ tabs: { ...state.tabs, [id]: { ...state.tabs[id], viewState } } })), setCursor: (id, lineNumber, column) => set((state) => ({ tabs: { ...state.tabs, [id]: { ...state.tabs[id], cursor: { lineNumber, column } } } })),
   setFontSize: (fontSize) => set({ fontSize: Math.min(28, Math.max(10, fontSize)) }), setPanelWidths: (leftWidth, rightWidth) => set({ leftWidth, rightWidth }), toggleRightPanel: () => set((state) => ({ rightPanelVisible: !state.rightPanelVisible })),
-}), { name: "coding-editor-preferences", partialize: (state) => ({ fontSize: state.fontSize, leftWidth: state.leftWidth, rightWidth: state.rightWidth, rightPanelVisible: state.rightPanelVisible }) }));
+}), {
+  name: "coding-editor-preferences",
+  partialize: (state) => ({
+    fontSize: state.fontSize,
+    leftWidth: state.leftWidth,
+    rightWidth: state.rightWidth,
+    rightPanelVisible: state.rightPanelVisible,
+  }),
+  merge: (persisted, current) => {
+    const preferences = persisted as Partial<EditorState>;
+    return {
+      ...current,
+      ...preferences,
+      rightWidth: Math.max(320, preferences.rightWidth ?? current.rightWidth),
+    };
+  },
+}));
