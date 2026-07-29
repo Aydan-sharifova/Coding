@@ -65,16 +65,11 @@ public static class ApiServiceCollectionExtensions
 
             options.AddPolicy("Client", policy =>
             {
-                if (origins.Length == 0)
-                {
-                    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
-                    return;
-                }
-
-                policy.WithOrigins(origins)
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
+                if (origins.Length > 0)
+                    policy.WithOrigins(origins)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
             });
         });
 
@@ -133,6 +128,8 @@ public static class ApiServiceCollectionExtensions
         {
             services.AddStackExchangeRedisCache(options =>
                 options.Configuration = redisConnection);
+            services.AddHealthChecks()
+                .AddCheck("redis", new RedisHealthCheck(redisConnection));
         }
 
         return services;
@@ -218,5 +215,29 @@ public static class ApiServiceCollectionExtensions
         });
 
         return services;
+    }
+}
+
+internal sealed class RedisHealthCheck(string connectionString)
+    : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
+{
+    public async Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(
+        Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var options = StackExchange.Redis.ConfigurationOptions.Parse(connectionString);
+            options.AbortOnConnectFail = false;
+            options.ConnectTimeout = 3000;
+            using var connection = await StackExchange.Redis.ConnectionMultiplexer.ConnectAsync(options);
+            await connection.GetDatabase().PingAsync();
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy();
+        }
+        catch (Exception exception)
+        {
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy(
+                "Redis is unavailable.", exception);
+        }
     }
 }

@@ -78,10 +78,24 @@ public sealed class UploadAvatarHandler(AppDbContext db, ICurrentUser current, I
     private static readonly Dictionary<string, string> Allowed = new(StringComparer.OrdinalIgnoreCase) { [".jpg"] = "image/jpeg", [".jpeg"] = "image/jpeg", [".png"] = "image/png", [".webp"] = "image/webp" };
     public async Task<string> Handle(UploadAvatarCommand r, CancellationToken ct)
     {
-        if (r.Content.Length is 0 or > 5_242_880 || !Allowed.TryGetValue(r.Extension, out var mime) || mime != r.ContentType) throw new InvalidOperationException("Avatar must be a JPG, PNG, or WebP file up to 5 MB.");
+        if (r.Content.Length is 0 or > 5_242_880 ||
+            !Allowed.TryGetValue(r.Extension, out var mime) ||
+            !string.Equals(mime, r.ContentType, StringComparison.OrdinalIgnoreCase) ||
+            !HasValidSignature(r.Content, mime))
+            throw new FluentValidation.ValidationException("Avatar must be a valid JPG, PNG, or WebP file up to 5 MB.");
         var user = await db.Users.SingleAsync(x => x.ID == current.UserId, ct); if (!string.IsNullOrWhiteSpace(user.AvatarUrl)) await storage.DeleteAsync(user.AvatarUrl, ct);
         await using var stream = new MemoryStream(r.Content, writable: false); user.AvatarUrl = await storage.SaveAsync(stream, r.Extension.ToLowerInvariant(), r.ContentType, ct); user.UpdatedAt = DateTime.UtcNow; await db.SaveChangesAsync(ct); return user.AvatarUrl;
     }
+
+    private static bool HasValidSignature(byte[] content, string mime) => mime switch
+    {
+        "image/jpeg" => content.Length >= 3 && content[0] == 0xFF && content[1] == 0xD8 && content[2] == 0xFF,
+        "image/png" => content.Length >= 8 && content.AsSpan(0, 8).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }),
+        "image/webp" => content.Length >= 12 &&
+            content.AsSpan(0, 4).SequenceEqual("RIFF"u8) &&
+            content.AsSpan(8, 4).SequenceEqual("WEBP"u8),
+        _ => false
+    };
 }
 public sealed class RemoveAvatarHandler(AppDbContext db, ICurrentUser current, IFileStorageService storage) : IRequestHandler<RemoveAvatarCommand>
 {

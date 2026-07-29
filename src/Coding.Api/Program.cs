@@ -33,15 +33,34 @@ try
     });
 
     var app = builder.Build();
+    var migrationOnly = args.Contains("--migrate", StringComparer.OrdinalIgnoreCase);
 
-    if (builder.Configuration.GetValue("Database:ApplyMigrations", false))
+    if (migrationOnly || builder.Configuration.GetValue("Database:ApplyMigrations", false))
     {
-        await app.Services.InitializeDatabaseAsync();
+        await app.Services.InitializeDatabaseAsync(
+            seedDevelopmentData: app.Environment.IsDevelopment() &&
+                builder.Configuration.GetValue("Database:SeedDevelopmentData", false));
+    }
+
+    if (migrationOnly)
+    {
+        Log.Information("Database migration completed successfully.");
+        return;
     }
 
     app.UseForwardedHeaders();
     app.UseSerilogRequestLogging();
     app.UseExceptionHandler();
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers.XContentTypeOptions = "nosniff";
+        context.Response.Headers.XFrameOptions = "DENY";
+        context.Response.Headers["Referrer-Policy"] = "no-referrer";
+        context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+        if (!app.Environment.IsDevelopment())
+            context.Response.Headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'";
+        await next();
+    });
     app.UseResponseCompression();
 
     if (!app.Environment.IsDevelopment())

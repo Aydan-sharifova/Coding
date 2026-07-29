@@ -48,7 +48,7 @@ public sealed class AiAssistantController(
 
             if (!HttpContext.RequestAborted.IsCancellationRequested)
             {
-                var message = exception is InvalidOperationException
+                var message = exception is InvalidOperationException or ArgumentException
                     ? exception.Message
                     : "AI generation failed. Check the API configuration and try again.";
                 await WriteChunkAsync(

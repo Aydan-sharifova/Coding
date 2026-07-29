@@ -1,11 +1,6 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
-WORKDIR /app
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-EXPOSE 8080
-
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 WORKDIR /source
-COPY ["Coding.sln", "."]
+COPY ["global.json", "Coding.sln", "./"]
 COPY ["src/Coding.Domain/Coding.Domain.csproj", "src/Coding.Domain/"]
 COPY ["src/Coding.Application/Coding.Application.csproj", "src/Coding.Application/"]
 COPY ["src/Coding.Infrastructure/Coding.Infrastructure.csproj", "src/Coding.Infrastructure/"]
@@ -13,14 +8,18 @@ COPY ["src/Coding.Api/Coding.Api.csproj", "src/Coding.Api/"]
 RUN dotnet restore "src/Coding.Api/Coding.Api.csproj"
 COPY . .
 RUN dotnet publish "src/Coding.Api/Coding.Api.csproj" \
-    --configuration Release \
-    --no-restore \
-    --output /app/publish \
+    -c Release --no-restore -o /out \
     /p:UseAppHost=false
 
-FROM runtime AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
 WORKDIR /app
-COPY --from=build --chown=appuser:appgroup /app/publish .
-USER appuser
-ENV ASPNETCORE_URLS=http://+:8080
+RUN addgroup -S -g 10001 app && adduser -S -D -H -u 10001 -G app app \
+    && mkdir -p /app/wwwroot/uploads/avatars \
+    && chown -R app:app /app
+COPY --from=build --chown=app:app /out .
+USER 10001:10001
+ENV ASPNETCORE_HTTP_PORTS=8080 \
+    DOTNET_EnableDiagnostics=0 \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+EXPOSE 8080
 ENTRYPOINT ["dotnet", "Coding.Api.dll"]

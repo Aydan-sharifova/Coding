@@ -56,22 +56,40 @@ public static class DependencyInjection
                 ? provider.GetRequiredService<SmtpEmailSender>()
                 : provider.GetRequiredService<LoggingEmailSender>());
         services.AddScoped<IdentityPasswordService>();
+        services.AddScoped<DevelopmentDataSeeder>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IActivityLogger, ActivityLogger>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddOptions<OpenAiOptions>()
             .Bind(configuration.GetSection(OpenAiOptions.SectionName));
+        services.AddOptions<AiProviderOptions>()
+            .Bind(configuration.GetSection(AiProviderOptions.SectionName));
+        services.AddOptions<OpenAiCompatibleOptions>()
+            .Bind(configuration.GetSection(OpenAiCompatibleOptions.SectionName))
+            .Validate(
+                options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out _) &&
+                           !string.IsNullOrWhiteSpace(options.Model),
+                "OpenAICompatible requires a valid BaseUrl and Model.")
+            .ValidateOnStart();
         services.AddHttpClient<OpenAiProvider>(client =>
+            client.Timeout = Timeout.InfiniteTimeSpan);
+        services.AddHttpClient<OpenAiCompatibleProvider>(client =>
             client.Timeout = Timeout.InfiniteTimeSpan);
         services.AddScoped<DevelopmentAiProvider>();
         services.AddScoped<IAiProvider>(provider =>
         {
-            var options = provider
-                .GetRequiredService<Microsoft.Extensions.Options.IOptions<OpenAiOptions>>()
+            var selected = provider
+                .GetRequiredService<Microsoft.Extensions.Options.IOptions<AiProviderOptions>>()
                 .Value;
-            return options.IsConfigured
-                ? provider.GetRequiredService<OpenAiProvider>()
-                : provider.GetRequiredService<DevelopmentAiProvider>();
+            return selected.Provider.Trim().ToLowerInvariant() switch
+            {
+                "openai" => provider.GetRequiredService<OpenAiProvider>(),
+                "ollama" or "openaicompatible" =>
+                    provider.GetRequiredService<OpenAiCompatibleProvider>(),
+                "development" => provider.GetRequiredService<DevelopmentAiProvider>(),
+                _ => throw new InvalidOperationException(
+                    $"Unknown AI provider '{selected.Provider}'.")
+            };
         });
         services.AddScoped<IAiContextBuilder, AiContextBuilder>();
         services.AddScoped<IAiPromptTemplateService, AiPromptTemplateService>();

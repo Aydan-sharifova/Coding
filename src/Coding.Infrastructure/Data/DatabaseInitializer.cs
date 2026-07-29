@@ -9,6 +9,7 @@ public static class DatabaseInitializer
 {
     public static async Task InitializeDatabaseAsync(
         this IServiceProvider services,
+        bool seedDevelopmentData = false,
         CancellationToken cancellationToken = default)
     {
         await using var scope = services.CreateAsyncScope();
@@ -30,5 +31,11 @@ public static class DatabaseInitializer
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        if (seedDevelopmentData)
+        {
+            var seeder = scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>();
+            await seeder.SeedAsync(cancellationToken);
+        }
     }
 }

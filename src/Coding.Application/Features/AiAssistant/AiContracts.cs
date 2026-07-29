@@ -11,8 +11,15 @@ public sealed record AiAssistantRequest(
     string? SelectedCode = null,
     string? NeighboringCode = null,
     string? ProgrammingLanguage = null,
-    IReadOnlyList<Guid>? ReferencedFileIds = null);
+    IReadOnlyList<Guid>? ReferencedFileIds = null,
+    IReadOnlyList<AiAttachmentRequest>? Attachments = null);
 
+public sealed record AiAttachmentRequest(
+    string FileName,
+    string MediaType,
+    string Content,
+    bool IsImage);
+public sealed record AiImageAttachment(string FileName, string MediaType, string Base64Content);
 public sealed record AiRepositoryContext(string Content, int CharacterCount, IReadOnlyList<Guid> IncludedFileIds);
 public sealed record AiProviderMessage(AiMessageRole Role, string Content);
 public sealed record AiRequest(
@@ -21,7 +28,8 @@ public sealed record AiRequest(
     string RepositoryContext,
     string ProgrammingLanguage,
     AiAssistantAction Action,
-    IReadOnlyList<AiProviderMessage> History);
+    IReadOnlyList<AiProviderMessage> History,
+    IReadOnlyList<AiImageAttachment>? Images = null);
 
 public sealed record AiStreamChunk(
     string Content,
