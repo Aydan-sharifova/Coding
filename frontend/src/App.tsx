@@ -8,6 +8,8 @@ import { PageSkeleton } from "./components/AsyncState";
 
 const LoginPage = lazy(() => import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })));
 const RegisterPage = lazy(() => import("./pages/RegisterPage").then((module) => ({ default: module.RegisterPage })));
+const GuestAiPage = lazy(() => import("./pages/GuestAiPage").then((module) => ({ default: module.GuestAiPage })));
+const DemoLoginPage = lazy(() => import("./pages/DemoLoginPage").then((module) => ({ default: module.DemoLoginPage })));
 const ErrorPage = lazy(() => import("./pages/ErrorPage").then((module) => ({ default: module.ErrorPage })));
 const DashboardLayout = lazy(() => import("./layouts/DashboardLayout").then((module) => ({ default: module.DashboardLayout })));
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
@@ -31,9 +33,37 @@ function ProtectedDashboard() {
   return session ? <RouteErrorBoundary><Suspense fallback={<div className="route-loader" role="status">Loading workspace…</div>}><DashboardLayout /></Suspense></RouteErrorBoundary> : <Navigate to="/login" replace />;
 }
 
+function HomeRedirect() {
+  const { session, isInitializing } = useAuth();
+  if (isInitializing) return <PageSkeleton />;
+  const demoBuild = import.meta.env.VITE_DEMO_MODE === "true";
+  return <Navigate to={session ? "/dashboard" : demoBuild ? "/demo" : "/ai"} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<HomeRedirect />} />
+      <Route
+        path="/ai"
+        element={
+          <RouteErrorBoundary>
+            <Suspense fallback={<PageSkeleton />}>
+              <GuestAiPage />
+            </Suspense>
+          </RouteErrorBoundary>
+        }
+      />
+      <Route
+        path="/demo"
+        element={
+          <RouteErrorBoundary>
+            <Suspense fallback={<PageSkeleton />}>
+              <DemoLoginPage />
+            </Suspense>
+          </RouteErrorBoundary>
+        }
+      />
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Suspense fallback={<PageSkeleton />}><LoginPage /></Suspense>} />
         <Route path="/register" element={<Suspense fallback={<PageSkeleton />}><RegisterPage /></Suspense>} />

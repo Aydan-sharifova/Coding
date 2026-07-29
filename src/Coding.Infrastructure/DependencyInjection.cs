@@ -15,6 +15,8 @@ using Coding.Application.Features.AiAssistant;
 using Coding.Infrastructure.AiAssistant;
 using Coding.Infrastructure.Caching;
 using Coding.Application.Abstractions;
+using Coding.Application.Features.Demo;
+using Coding.Infrastructure.Demo;
 
 namespace Coding.Infrastructure;
 
@@ -57,6 +59,20 @@ public static class DependencyInjection
                 : provider.GetRequiredService<LoggingEmailSender>());
         services.AddScoped<IdentityPasswordService>();
         services.AddScoped<DevelopmentDataSeeder>();
+        services.AddOptions<DemoModeOptions>()
+            .Bind(configuration.GetSection(DemoModeOptions.SectionName))
+            .Validate(
+                options =>
+                    !options.Enabled ||
+                    (!string.IsNullOrWhiteSpace(options.DatabaseNameMarker) &&
+                     options.AccessTokenMinutes is >= 5 and <= 60 &&
+                     options.RefreshTokenHours is >= 1 and <= 12 &&
+                     options.MaxUploadBytes is >= 65_536 and <= 5_242_880),
+                "Enabled DemoMode requires safe token lifetimes, upload limits, and a database marker.")
+            .ValidateOnStart();
+        services.AddScoped<DemoDataSeeder>();
+        services.AddScoped<IDemoEnvironmentService, DemoEnvironmentService>();
+        services.AddHostedService<DemoResetBackgroundService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IActivityLogger, ActivityLogger>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
@@ -94,6 +110,7 @@ public static class DependencyInjection
         services.AddScoped<IAiContextBuilder, AiContextBuilder>();
         services.AddScoped<IAiPromptTemplateService, AiPromptTemplateService>();
         services.AddScoped<IAiUsageTracker, AiUsageTracker>();
+        services.AddScoped<IGuestAiService, GuestAiService>();
         services.AddScoped<IAiConversationService, AiConversationService>();
 
         return services;

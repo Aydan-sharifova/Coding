@@ -9,6 +9,7 @@ namespace Coding.Controllers;
 [ApiController, Authorize, Route("api/ai"), EnableRateLimiting("ai")]
 public sealed class AiAssistantController(
     IAiConversationService conversations,
+    IGuestAiService guestAi,
     ILogger<AiAssistantController> logger) : ControllerBase
 {
     [HttpGet("projects/{projectId:guid}/conversations")]
@@ -22,10 +23,7 @@ public sealed class AiAssistantController(
     [HttpPost("stream")]
     public async Task Stream(AiAssistantRequest request, CancellationToken cancellationToken)
     {
-        Response.StatusCode = StatusCodes.Status200OK;
-        Response.ContentType = "text/event-stream";
-        Response.Headers.CacheControl = "no-cache, no-transform";
-        Response.Headers.Append("X-Accel-Buffering", "no");
+        PrepareStreamResponse();
 
         try
         {
@@ -60,6 +58,54 @@ public sealed class AiAssistantController(
                     CancellationToken.None);
             }
         }
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("guest-ai")]
+    [HttpPost("guest/stream")]
+    public async Task StreamGuest(GuestAiRequest request, CancellationToken cancellationToken)
+    {
+        PrepareStreamResponse();
+
+        try
+        {
+            await foreach (var chunk in guestAi
+                .StreamAsync(request, cancellationToken)
+                .WithCancellation(cancellationToken))
+            {
+                await WriteChunkAsync(chunk, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogInformation("Guest AI generation was cancelled.");
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Guest AI generation failed.");
+
+            if (!HttpContext.RequestAborted.IsCancellationRequested)
+            {
+                var message = exception is InvalidOperationException or ArgumentException
+                    ? exception.Message
+                    : "AI generation failed. Check the API configuration and try again.";
+                await WriteChunkAsync(
+                    new AiStreamChunk(
+                        string.Empty,
+                        IsCompleted: true,
+                        FinishReason: "error",
+                        Error: message),
+                    CancellationToken.None);
+            }
+        }
+    }
+
+    private void PrepareStreamResponse()
+    {
+        Response.StatusCode = StatusCodes.Status200OK;
+        Response.ContentType = "text/event-stream";
+        Response.Headers.CacheControl = "no-cache, no-transform";
+        Response.Headers.Append("X-Accel-Buffering", "no");
     }
 
     private async Task WriteChunkAsync(AiStreamChunk chunk, CancellationToken cancellationToken)

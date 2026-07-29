@@ -8,6 +8,9 @@ export interface AuthenticatedUser {
   email: string;
   isEmailVerified: boolean;
   roles: Role[];
+  isDemo: boolean;
+  demoRole: DemoRole | null;
+  demoProjectId: string | null;
 }
 
 export interface AuthResponse {
@@ -19,6 +22,12 @@ export interface AuthResponse {
 export interface LoginPayload {
   email: string;
   password: string;
+}
+
+export type DemoRole = "Owner" | "Admin" | "Member";
+
+export interface DemoLoginPayload {
+  role: DemoRole;
 }
 
 export interface RegisterPayload extends LoginPayload {

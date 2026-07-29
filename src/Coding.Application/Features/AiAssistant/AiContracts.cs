@@ -19,6 +19,10 @@ public sealed record AiAttachmentRequest(
     string MediaType,
     string Content,
     bool IsImage);
+public sealed record GuestAiMessage(AiMessageRole Role, string Content);
+public sealed record GuestAiRequest(
+    string UserMessage,
+    IReadOnlyList<GuestAiMessage>? History = null);
 public sealed record AiImageAttachment(string FileName, string MediaType, string Base64Content);
 public sealed record AiRepositoryContext(string Content, int CharacterCount, IReadOnlyList<Guid> IncludedFileIds);
 public sealed record AiProviderMessage(AiMessageRole Role, string Content);
@@ -29,7 +33,8 @@ public sealed record AiRequest(
     string ProgrammingLanguage,
     AiAssistantAction Action,
     IReadOnlyList<AiProviderMessage> History,
-    IReadOnlyList<AiImageAttachment>? Images = null);
+    IReadOnlyList<AiImageAttachment>? Images = null,
+    int? MaxOutputTokens = null);
 
 public sealed record AiStreamChunk(
     string Content,
@@ -55,6 +60,12 @@ public interface IAiConversationService
     IAsyncEnumerable<AiStreamChunk> StreamAsync(AiAssistantRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyList<AiConversationDto>> GetConversationsAsync(Guid projectId, CancellationToken cancellationToken);
     Task<AiConversationDetails> GetConversationAsync(Guid conversationId, CancellationToken cancellationToken);
+}
+public interface IGuestAiService
+{
+    IAsyncEnumerable<AiStreamChunk> StreamAsync(
+        GuestAiRequest request,
+        CancellationToken cancellationToken);
 }
 public interface IAiContextBuilder
 {

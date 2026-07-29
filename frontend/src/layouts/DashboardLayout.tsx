@@ -35,6 +35,7 @@ export function DashboardLayout() {
   const { pt } = usePageTranslation();
   const projects = useProjects(); const createProject = useCreateProject(); const navigate = useNavigate(); const { show } = useToast();
   const user = session?.user;
+  const isDemo = Boolean(user?.isDemo);
   const initials = user ? `${user.firstName[0]}${user.lastName[0]}` : "AD";
   useEffect(() => { const shortcut = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); window.setTimeout(() => document.getElementById("global-search")?.focus(), 0); } }; window.addEventListener("keydown", shortcut); return () => window.removeEventListener("keydown", shortcut); }, []);
   useEffect(() => {
@@ -76,7 +77,7 @@ export function DashboardLayout() {
   return (
     <div className="dashboard-shell">
       <aside className={`sidebar ${sidebarOpen ? "is-open" : ""}`}>
-        <div className="sidebar-brand"><span className="brand-mark">C</span><span>Coding</span></div>
+        <div className="sidebar-brand"><span className="brand-mark">C</span><span>Coding</span>{isDemo && <b className="sidebar-demo-label">Demo</b>}</div>
         <nav className="sidebar-nav" aria-label={t("openNavigation")}>
           <p>{t("workspace")}</p>
           {navItems.map((item) => <NavLink key={item.label} to={item.path} end={item.path === "/dashboard"} onClick={() => setSidebarOpen(false)}><Icon name={item.icon} />{t(item.label)}</NavLink>)}
@@ -120,6 +121,13 @@ export function DashboardLayout() {
           <button className="icon-button mobile-menu" onClick={() => setSidebarOpen(true)} aria-label={t("openNavigation")}><Icon name="menu" /></button>
           <div className="global-search-wrap"><button className="dashboard-search" onClick={() => setSearchOpen(true)} aria-label={t("search")}><Icon name="search" /><span>{t("search")}</span><kbd>⌘ K</kbd></button></div>
           <div className="topbar-actions">
+            {isDemo && (
+              <span className="persistent-demo-badge" title="Changes reset automatically">
+                <i />
+                Demo Environment
+                {user?.demoRole && <b>{user.demoRole}</b>}
+              </span>
+            )}
             <button className="icon-button" onClick={toggleTheme} aria-label={t("theme")}><Icon name={theme === "dark" ? "sun" : "moon"} /></button>
             <NotificationBell />
             <button className="create-button" onClick={() => setCreateOpen(true)}><Icon name="plus" /> {t("newProject")}</button>

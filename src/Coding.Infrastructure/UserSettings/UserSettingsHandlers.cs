@@ -7,6 +7,7 @@ using Coding.Infrastructure.Authentication;
 using Coding.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Coding.Application.Features.Demo;
 
 namespace Coding.Infrastructure.UserSettings;
 
@@ -73,11 +74,19 @@ public sealed class ChangePasswordHandler(AppDbContext db, ICurrentUser current,
         await audit.LogAsync(new(current.UserId, null, "PasswordChanged", nameof(User), user.ID, "User changed account password."), ct);
     }
 }
-public sealed class UploadAvatarHandler(AppDbContext db, ICurrentUser current, IFileStorageService storage) : IRequestHandler<UploadAvatarCommand, string>
+public sealed class UploadAvatarHandler(
+    AppDbContext db,
+    ICurrentUser current,
+    IFileStorageService storage,
+    IDemoEnvironmentService demoEnvironment) : IRequestHandler<UploadAvatarCommand, string>
 {
     private static readonly Dictionary<string, string> Allowed = new(StringComparer.OrdinalIgnoreCase) { [".jpg"] = "image/jpeg", [".jpeg"] = "image/jpeg", [".png"] = "image/png", [".webp"] = "image/webp" };
     public async Task<string> Handle(UploadAvatarCommand r, CancellationToken ct)
     {
+        demoEnvironment.EnsureFileAllowed(
+            current.UserId,
+            $"avatar{r.Extension}",
+            r.Content.LongLength);
         if (r.Content.Length is 0 or > 5_242_880 ||
             !Allowed.TryGetValue(r.Extension, out var mime) ||
             !string.Equals(mime, r.ContentType, StringComparison.OrdinalIgnoreCase) ||

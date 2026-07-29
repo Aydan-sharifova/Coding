@@ -44,6 +44,19 @@ public sealed class AuthenticationController : ControllerBase
     }
 
     [AllowAnonymous]
+    [HttpPost("demo-login")]
+    [EndpointSummary("Enter the isolated public demo as a predefined project role")]
+    [EndpointDescription("Available only in the Demo environment. No demo password is exposed to the client.")]
+    public async Task<IActionResult> DemoLogin(
+        DemoLoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await authenticationService.DemoLoginAsync(request, cancellationToken);
+        SetRefreshTokenCookie(response.RefreshToken);
+        return Ok(ToPublicResponse(response));
+    }
+
+    [AllowAnonymous]
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {

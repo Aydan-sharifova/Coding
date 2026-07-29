@@ -1,0 +1,160 @@
+name: coding-platform-demo
+
+x-demo-api-environment: &demo-api-environment
+  ASPNETCORE_ENVIRONMENT: Demo
+  ASPNETCORE_HTTP_PORTS: "8080"
+  ConnectionStrings__Default: Host=demo-postgres;Port=5432;Database=CodingDemoDb;Username=${DEMO_POSTGRES_USER:-coding_demo};Password=${DEMO_POSTGRES_PASSWORD:?Set DEMO_POSTGRES_PASSWORD}
+  ConnectionStrings__Redis: demo-redis:6379,password=${DEMO_REDIS_PASSWORD:?Set DEMO_REDIS_PASSWORD},abortConnect=false
+  Jwt__Issuer: Coding.Demo
+  Jwt__Audience: Coding.Demo.Frontend
+  Jwt__Key: ${DEMO_JWT_KEY:?Set DEMO_JWT_KEY to at least 32 bytes}
+  Jwt__AccessTokenMinutes: "20"
+  Cors__AllowedOrigins__0: ${DEMO_FRONTEND_ORIGIN:-http://localhost:8081}
+  AllowedHosts: "*"
+  Database__ApplyMigrations: "false"
+  Database__SeedDevelopmentData: "false"
+  DemoMode__Enabled: "true"
+  DemoMode__DatabaseNameMarker: "Demo"
+  DemoMode__AccessTokenMinutes: "20"
+  DemoMode__RefreshTokenHours: "2"
+  DemoMode__ResetIntervalMinutes: ${DEMO_RESET_INTERVAL_MINUTES:-60}
+  DemoMode__MaxUploadBytes: ${DEMO_MAX_UPLOAD_BYTES:-1048576}
+  Smtp__Enabled: "false"
+  AI__Provider: ${DEMO_AI_PROVIDER:-Ollama}
+  OpenAICompatible__BaseUrl: ${DEMO_AI_BASE_URL:-http://host.docker.internal:11434/v1/}
+  OpenAICompatible__Model: ${DEMO_AI_MODEL:-qwen2.5-coder:1.5b}
+  OpenAICompatible__VisionModel: ${DEMO_AI_VISION_MODEL:-aydan-vision}
+  OpenAICompatible__ApiKey: ${DEMO_AI_API_KEY:-ollama}
+  OpenAICompatible__MaxOutputTokens: ${DEMO_AI_MAX_OUTPUT_TOKENS:-1536}
+  OpenAICompatible__Temperature: "0.1"
+
+services:
+  demo-frontend:
+    image: ${DEMO_FRONTEND_IMAGE:-coding-demo-frontend:1.0.0}
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_DEMO_MODE: "true"
+    ports:
+      - "${DEMO_FRONTEND_PORT:-8081}:8080"
+    depends_on:
+      demo-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    restart: unless-stopped
+    networks: [demo-frontend, demo-backend]
+
+  demo-api:
+    image: ${DEMO_API_IMAGE:-coding-demo-api:1.0.0}
+    build:
+      context: .
+      dockerfile: src/Coding.Api/Dockerfile
+    environment: *demo-api-environment
+    expose: ["8080"]
+    depends_on:
+      demo-seed:
+        condition: service_completed_successfully
+      demo-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    volumes:
+      - demo-avatar-data:/app/wwwroot/uploads/avatars
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      demo-backend:
+        aliases:
+          - api
+
+  demo-seed:
+    image: ${DEMO_API_IMAGE:-coding-demo-api:1.0.0}
+    build:
+      context: .
+      dockerfile: src/Coding.Api/Dockerfile
+    command: ["--demo-seed"]
+    environment: *demo-api-environment
+    depends_on:
+      demo-postgres:
+        condition: service_healthy
+    restart: "no"
+    networks: [demo-backend]
+
+  demo-reset:
+    image: ${DEMO_API_IMAGE:-coding-demo-api:1.0.0}
+    command: ["--demo-reset"]
+    environment: *demo-api-environment
+    depends_on:
+      demo-postgres:
+        condition: service_healthy
+    restart: "no"
+    profiles: ["operations"]
+    networks: [demo-backend]
+
+  demo-postgres:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_DB: CodingDemoDb
+      POSTGRES_USER: ${DEMO_POSTGRES_USER:-coding_demo}
+      POSTGRES_PASSWORD: ${DEMO_POSTGRES_PASSWORD:?Set DEMO_POSTGRES_PASSWORD}
+    expose: ["5432"]
+    ports:
+      - "${DEMO_POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - demo-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks: [demo-backend]
+
+  demo-redis:
+    image: redis:7.4-alpine
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\""]
+    environment:
+      REDIS_PASSWORD: ${DEMO_REDIS_PASSWORD:?Set DEMO_REDIS_PASSWORD}
+    expose: ["6379"]
+    volumes:
+      - demo-redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks: [demo-backend]
+
+volumes:
+  demo-postgres-data:
+  demo-redis-data:
+  demo-avatar-data:
+
+networks:
+  demo-frontend:
+  demo-backend:
+    internal: true

@@ -1,12 +1,13 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { authService } from "../services/authService";
-import type { AuthResponse, LoginPayload, RegisterPayload } from "../types/auth";
+import type { AuthResponse, DemoLoginPayload, LoginPayload, RegisterPayload } from "../types/auth";
 import { signalRService } from "../features/collaboration/signalRService";
 
 interface AuthContextValue {
   session: AuthResponse | null;
   isInitializing: boolean;
   login: (payload: LoginPayload) => Promise<void>;
+  demoLogin: (payload: DemoLoginPayload) => Promise<AuthResponse>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -30,6 +31,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setSession(await authService.login(payload));
   }, []);
 
+  const demoLogin = useCallback(async (payload: DemoLoginPayload) => {
+    const demoSession = await authService.demoLogin(payload);
+    setSession(demoSession);
+    return demoSession;
+  }, []);
+
   const register = useCallback(async (payload: RegisterPayload) => {
     setSession(await authService.register(payload));
   }, []);
@@ -40,6 +47,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setSession(null);
   }, []);
 
-  const value = useMemo(() => ({ session, isInitializing, login, register, logout }), [session, isInitializing, login, register, logout]);
+  const value = useMemo(
+    () => ({ session, isInitializing, login, demoLogin, register, logout }),
+    [session, isInitializing, login, demoLogin, register, logout],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

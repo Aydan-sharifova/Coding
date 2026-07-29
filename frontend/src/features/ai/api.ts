@@ -1,6 +1,12 @@
 import { apiClient, ApiError } from "../../services/apiClient";
 import { tokenStore } from "../../services/tokenStore";
-import type { AiAssistantRequest, AiConversation, AiConversationDetails, AiStreamChunk } from "./types";
+import type {
+  AiAssistantRequest,
+  AiConversation,
+  AiConversationDetails,
+  AiStreamChunk,
+  GuestAiRequest,
+} from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -34,6 +40,44 @@ async function streamRequest(
     return streamRequest(request, signal, onChunk, false);
   }
   if (!response.ok) throw new ApiError((await response.text()) || "AI request failed.", response.status);
+  await consumeStream(response, onChunk);
+}
+
+async function guestStreamRequest(
+  request: GuestAiRequest,
+  signal: AbortSignal,
+  onChunk: (chunk: AiStreamChunk) => void,
+): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/ai/guest/stream`, {
+      method: "POST",
+      credentials: "omit",
+      signal,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify(request),
+    });
+  } catch (error) {
+    if (signal.aborted) throw error;
+    throw new ApiError("The guest AI service is unavailable.", 0);
+  }
+
+  if (!response.ok) {
+    const fallback = response.status === 429
+      ? "The guest preview is busy. Please wait a minute and try again."
+      : "Guest AI request failed.";
+    throw new ApiError((await response.text()) || fallback, response.status);
+  }
+  await consumeStream(response, onChunk);
+}
+
+async function consumeStream(
+  response: Response,
+  onChunk: (chunk: AiStreamChunk) => void,
+): Promise<void> {
   if (!response.body) throw new ApiError("The AI stream was empty.", 502);
 
   const reader = response.body.getReader();
@@ -60,4 +104,5 @@ export const aiApi = {
   conversations: (projectId: string) => apiClient.get<AiConversation[]>(`/ai/projects/${projectId}/conversations`),
   conversation: (id: string) => apiClient.get<AiConversationDetails>(`/ai/conversations/${id}`),
   stream: streamRequest,
+  guestStream: guestStreamRequest,
 };

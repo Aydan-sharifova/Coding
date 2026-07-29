@@ -20,6 +20,16 @@ export interface AiAssistantRequest {
   attachments?: AiAttachmentRequest[];
 }
 
+export interface GuestAiHistoryMessage {
+  role: "User" | "Assistant";
+  content: string;
+}
+
+export interface GuestAiRequest {
+  userMessage: string;
+  history?: GuestAiHistoryMessage[];
+}
+
 export interface AiStreamChunk {
   content: string;
   isCompleted: boolean;

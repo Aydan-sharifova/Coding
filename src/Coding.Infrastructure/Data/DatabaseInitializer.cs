@@ -1,4 +1,6 @@
 using Coding.Infrastructure.Authentication;
+using Coding.Application.Features.Demo;
+using Coding.Infrastructure.Demo;
 using Coding.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +12,7 @@ public static class DatabaseInitializer
     public static async Task InitializeDatabaseAsync(
         this IServiceProvider services,
         bool seedDevelopmentData = false,
+        bool seedDemoData = false,
         CancellationToken cancellationToken = default)
     {
         await using var scope = services.CreateAsyncScope();
@@ -37,5 +40,24 @@ public static class DatabaseInitializer
             var seeder = scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>();
             await seeder.SeedAsync(cancellationToken);
         }
+
+        if (seedDemoData)
+        {
+            var demoEnvironment =
+                scope.ServiceProvider.GetRequiredService<IDemoEnvironmentService>();
+            demoEnvironment.EnsureAvailable();
+            var seeder = scope.ServiceProvider.GetRequiredService<DemoDataSeeder>();
+            await seeder.SeedAsync(cancellationToken);
+        }
+    }
+
+    public static async Task ResetDemoEnvironmentAsync(
+        this IServiceProvider services,
+        CancellationToken cancellationToken = default)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var demoEnvironment =
+            scope.ServiceProvider.GetRequiredService<IDemoEnvironmentService>();
+        await demoEnvironment.ResetAsync(cancellationToken);
     }
 }

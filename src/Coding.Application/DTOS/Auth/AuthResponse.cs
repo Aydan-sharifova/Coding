@@ -13,4 +13,7 @@ public sealed record AuthenticatedUser(
     string UserName,
     string Email,
     bool IsEmailVerified,
-    IReadOnlyCollection<string> Roles);
+    IReadOnlyCollection<string> Roles,
+    bool IsDemo = false,
+    string? DemoRole = null,
+    Guid? DemoProjectId = null);

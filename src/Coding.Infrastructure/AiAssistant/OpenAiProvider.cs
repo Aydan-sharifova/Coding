@@ -175,7 +175,10 @@ public sealed class OpenAiProvider(
             input,
             stream = true,
             store = false,
-            max_output_tokens = Math.Clamp(_options.MaxOutputTokens, 256, 32_768)
+            max_output_tokens = Math.Clamp(
+                request.MaxOutputTokens ?? _options.MaxOutputTokens,
+                256,
+                32_768)
         };
     }
 

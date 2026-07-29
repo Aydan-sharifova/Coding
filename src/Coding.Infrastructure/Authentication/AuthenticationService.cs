@@ -13,16 +13,18 @@ using System.Security.Cryptography;
 using System.Net.Mail;
 using System.Text;
 using Coding.Application.Features.Activities;
+using Coding.Application.Features.Demo;
 
 namespace Coding.Infrastructure.Authentication;
 
 public sealed class AuthenticationService(
-     AppDbContext context,
+    AppDbContext context,
     IEmailSender emailSender,
     IConfiguration configuration,
     IdentityPasswordService passwordService,
     IActivityLogger activityLogger,
-    IHttpContextAccessor httpContextAccessor) : IAuthenticationService
+    IHttpContextAccessor httpContextAccessor,
+    IDemoEnvironmentService demoEnvironment) : IAuthenticationService
 {
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
     private static readonly TimeSpan AccountTokenLifetime = TimeSpan.FromHours(1);
@@ -124,6 +126,54 @@ public sealed class AuthenticationService(
         return response;
     }
 
+    public async Task<AuthResponse> DemoLoginAsync(
+        DemoLoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        demoEnvironment.EnsureAvailable();
+        if (!Enum.TryParse<DemoRole>(request.Role, true, out var demoRole))
+            throw new UnauthorizedException("Choose Owner, Admin, or Member for demo access.");
+
+        var userId = demoEnvironment.GetUserId(demoRole);
+        var user = await context.Users
+            .Include(item => item.UserRoles)
+            .ThenInclude(item => item.Role)
+            .SingleOrDefaultAsync(
+                item => item.ID == userId && !item.IsDeleted,
+                cancellationToken)
+            ?? throw new ServiceUnavailableException(
+                "The demo is being prepared. Run the demo seed command and try again.");
+
+        var projectRole = await context.ProjectMembers
+            .Where(member =>
+                member.ProjectId == demoEnvironment.SampleProjectId &&
+                member.UserId == userId)
+            .Select(member => (ProjectRole?)member.Role)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (!projectRole.HasValue ||
+            !string.Equals(projectRole.Value.ToString(), demoRole.ToString(), StringComparison.Ordinal))
+            throw new ServiceUnavailableException(
+                "The selected demo persona is not configured correctly. Reset the demo data.");
+
+        user.LastSeen = DateTime.UtcNow;
+        var roles = user.UserRoles.Select(item => item.Role.Name).Distinct().ToArray();
+        var response = await IssueTokensAsync(
+            user,
+            roles,
+            cancellationToken,
+            demoRole);
+        await activityLogger.LogAsync(
+            new(
+                user.ID,
+                demoEnvironment.SampleProjectId,
+                "DemoLogin",
+                nameof(User),
+                user.ID,
+                $"Public demo signed in as {demoRole}."),
+            cancellationToken);
+        return response;
+    }
+
     public async Task<AuthResponse> RefreshAsync(
         RefreshTokenRequest request,
         CancellationToken cancellationToken)
@@ -144,7 +194,13 @@ public sealed class AuthenticationService(
         storedToken.UpdateAt = DateTime.UtcNow;
 
         var roles = storedToken.User.UserRoles.Select(item => item.Role.Name).Distinct().ToArray();
-        return await IssueTokensAsync(storedToken.User, roles, cancellationToken);
+        return await IssueTokensAsync(
+            storedToken.User,
+            roles,
+            cancellationToken,
+            demoEnvironment.TryGetRole(storedToken.User.ID, out var demoRole)
+                ? demoRole
+                : null);
     }
 
     public async Task RevokeAsync(
@@ -230,11 +286,15 @@ public sealed class AuthenticationService(
     private async Task<AuthResponse> IssueTokensAsync(
         User user,
         IReadOnlyCollection<string> roles,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DemoRole? demoRole = null)
     {
         var now = DateTime.UtcNow;
         var sessionId = Guid.NewGuid();
-        var expiresAt = now.AddMinutes(configuration.GetValue("Jwt:AccessTokenMinutes", 15));
+        var expiresAt = now.AddMinutes(
+            demoRole.HasValue
+                ? demoEnvironment.AccessTokenMinutes
+                : configuration.GetValue("Jwt:AccessTokenMinutes", 15));
         var key = configuration["Jwt:Key"]!;
 
         var claims = new List<Claim>
@@ -246,6 +306,12 @@ public sealed class AuthenticationService(
             ,new("sid", sessionId.ToString())
         };
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+        if (demoRole.HasValue)
+        {
+            claims.Add(new Claim("demo", "true"));
+            claims.Add(new Claim("demo_role", demoRole.Value.ToString()));
+            claims.Add(new Claim("demo_project_id", demoEnvironment.SampleProjectId.ToString()));
+        }
 
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
@@ -265,7 +331,9 @@ public sealed class AuthenticationService(
             ID = Guid.NewGuid(),
             UserId = user.ID,
             Token = HashToken(plainRefreshToken),
-            ExpireDate = now.Add(RefreshTokenLifetime),
+            ExpireDate = demoRole.HasValue
+                ? now.AddHours(demoEnvironment.RefreshTokenHours)
+                : now.Add(RefreshTokenLifetime),
             CreatAt = now
         };
         context.RefreshTokens.Add(refreshToken);
@@ -290,7 +358,10 @@ public sealed class AuthenticationService(
                 user.UserName,
                 user.Email,
                 user.EmailVerifiedAt.HasValue,
-                roles));
+                roles,
+                demoRole.HasValue,
+                demoRole?.ToString(),
+                demoRole.HasValue ? demoEnvironment.SampleProjectId : null));
     }
 
     private async Task<AccountToken> GetValidAccountTokenAsync(

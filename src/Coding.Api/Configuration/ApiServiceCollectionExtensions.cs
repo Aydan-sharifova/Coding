@@ -111,6 +111,17 @@ public static class ApiServiceCollectionExtensions
                         QueueLimit = 1,
                         AutoReplenishment = true
                     }));
+            options.AddPolicy("guest-ai", httpContext =>
+                RateLimitPartition.GetTokenBucketLimiter(
+                    httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+                    _ => new TokenBucketRateLimiterOptions
+                    {
+                        TokenLimit = 4,
+                        TokensPerPeriod = 2,
+                        ReplenishmentPeriod = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
             options.AddPolicy("realtime", httpContext =>
                 RateLimitPartition.GetConcurrencyLimiter(
                     httpContext.User.Identity?.Name

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Coding.Api.Collaboration;
+using Coding.Api.Infrastructure;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -34,17 +35,38 @@ try
 
     var app = builder.Build();
     var migrationOnly = args.Contains("--migrate", StringComparer.OrdinalIgnoreCase);
+    var demoSeedOnly = args.Contains("--demo-seed", StringComparer.OrdinalIgnoreCase);
+    var demoResetOnly = args.Contains("--demo-reset", StringComparer.OrdinalIgnoreCase);
+    var demoModeEnabled = builder.Configuration.GetValue("DemoMode:Enabled", false);
 
-    if (migrationOnly || builder.Configuration.GetValue("Database:ApplyMigrations", false))
+    if (demoModeEnabled && !app.Environment.IsEnvironment("Demo"))
+        throw new InvalidOperationException(
+            "DemoMode may be enabled only when ASPNETCORE_ENVIRONMENT is Demo.");
+
+    if (migrationOnly ||
+        demoSeedOnly ||
+        demoResetOnly ||
+        builder.Configuration.GetValue("Database:ApplyMigrations", false))
     {
         await app.Services.InitializeDatabaseAsync(
             seedDevelopmentData: app.Environment.IsDevelopment() &&
-                builder.Configuration.GetValue("Database:SeedDevelopmentData", false));
+                builder.Configuration.GetValue("Database:SeedDevelopmentData", false),
+            seedDemoData: demoModeEnabled && !demoResetOnly);
     }
 
-    if (migrationOnly)
+    if (demoResetOnly)
     {
-        Log.Information("Database migration completed successfully.");
+        await app.Services.ResetDemoEnvironmentAsync();
+        Log.Information("Demo reset completed successfully.");
+        return;
+    }
+
+    if (migrationOnly || demoSeedOnly)
+    {
+        Log.Information(
+            demoSeedOnly
+                ? "Demo migration and seed completed successfully."
+                : "Database migration completed successfully.");
         return;
     }
 
@@ -63,7 +85,7 @@ try
     });
     app.UseResponseCompression();
 
-    if (!app.Environment.IsDevelopment())
+    if (app.Environment.IsProduction())
     {
         app.UseHsts();
     }
@@ -83,7 +105,7 @@ try
     // Local Vite/Nginx development proxies use the HTTP launch endpoint. Redirecting
     // proxied API calls to the HTTPS development certificate breaks browser requests.
     // Production TLS is still enforced here and by the reverse proxy/HSTS.
-    if (!app.Environment.IsDevelopment())
+    if (app.Environment.IsProduction())
     {
         app.UseHttpsRedirection();
     }
@@ -91,6 +113,7 @@ try
     app.UseStaticFiles();
     app.UseRateLimiter();
     app.UseAuthentication();
+    app.UseMiddleware<DemoModeGuardMiddleware>();
     app.UseAuthorization();
 
     app.MapHealthChecks("/health");

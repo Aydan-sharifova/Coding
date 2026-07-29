@@ -166,8 +166,8 @@ public sealed class OpenAiCompatibleProvider(
             ["messages"] = messages,
             ["temperature"] = Math.Clamp(_options.Temperature, 0, 2),
             ["max_tokens"] = images.Count > 0
-                ? Math.Clamp(_options.MaxOutputTokens, 256, 1_024)
-                : Math.Clamp(_options.MaxOutputTokens, 256, 16_384),
+                ? Math.Clamp(request.MaxOutputTokens ?? _options.MaxOutputTokens, 256, 1_024)
+                : Math.Clamp(request.MaxOutputTokens ?? _options.MaxOutputTokens, 256, 16_384),
             ["stream"] = true,
             ["stream_options"] = new { include_usage = true }
         };

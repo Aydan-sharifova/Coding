@@ -301,13 +301,90 @@ public sealed class AiUsageTracker(AppDbContext db) : IAiUsageTracker
     }
 }
 
+public sealed class GuestAiService(IAiProvider provider) : IGuestAiService
+{
+    private const int MaximumMessageCharacters = 4_000;
+    private const int MaximumHistoryMessages = 8;
+    private const int MaximumHistoryCharacters = 16_000;
+
+    public async IAsyncEnumerable<AiStreamChunk> StreamAsync(
+        GuestAiRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var userMessage = request.UserMessage?.Trim() ?? string.Empty;
+        if (userMessage.Length == 0)
+            throw new ArgumentException("Enter a message for the AI assistant.");
+        if (userMessage.Length > MaximumMessageCharacters)
+            throw new ArgumentException(
+                $"Guest messages are limited to {MaximumMessageCharacters:N0} characters.");
+
+        var history = ValidateHistory(request.History);
+        var providerRequest = new AiRequest(
+            """
+            You are Aydan AI, the public coding assistant for the Coding platform.
+            Answer software-development questions directly and concisely. Provide secure,
+            compilable examples when useful. You do not have access to private projects,
+            uploaded files, account data, or saved conversations. Never imply that you
+            inspected a repository or applied a change. Invite the user to create an
+            account only when project-aware assistance would materially improve the answer.
+            """,
+            userMessage,
+            string.Empty,
+            "general software development",
+            AiAssistantAction.Chat,
+            history,
+            [],
+            MaxOutputTokens: 768);
+
+        await foreach (var chunk in provider
+            .StreamAsync(providerRequest, cancellationToken)
+            .WithCancellation(cancellationToken))
+        {
+            yield return chunk with { ConversationId = null };
+        }
+    }
+
+    private static IReadOnlyList<AiProviderMessage> ValidateHistory(
+        IReadOnlyList<GuestAiMessage>? history)
+    {
+        if (history is null || history.Count == 0)
+            return [];
+        if (history.Count > MaximumHistoryMessages)
+            throw new ArgumentException(
+                $"Guest chat history is limited to the latest {MaximumHistoryMessages} messages.");
+
+        var totalCharacters = 0;
+        var validated = new List<AiProviderMessage>(history.Count);
+        foreach (var message in history)
+        {
+            if (message.Role is not (AiMessageRole.User or AiMessageRole.Assistant))
+                throw new ArgumentException("Guest chat history contains an unsupported role.");
+
+            var content = message.Content?.Trim() ?? string.Empty;
+            if (content.Length == 0 || content.Length > MaximumMessageCharacters)
+                throw new ArgumentException(
+                    $"Every guest chat message must contain 1 to {MaximumMessageCharacters:N0} characters.");
+
+            totalCharacters += content.Length;
+            if (totalCharacters > MaximumHistoryCharacters)
+                throw new ArgumentException(
+                    $"Guest chat history is limited to {MaximumHistoryCharacters:N0} characters.");
+
+            validated.Add(new AiProviderMessage(message.Role, content));
+        }
+
+        return validated;
+    }
+}
+
 public sealed class AiConversationService(
     AppDbContext db,
     ICurrentUser currentUser,
     IAiProvider provider,
     IAiContextBuilder contextBuilder,
     IAiPromptTemplateService prompts,
-    IAiUsageTracker usageTracker) : IAiConversationService
+    IAiUsageTracker usageTracker,
+    Coding.Application.Features.Demo.IDemoEnvironmentService demoEnvironment) : IAiConversationService
 {
     private const int MaximumAttachments = 4;
     private const int MaximumTextCharactersPerFile = 256_000;
@@ -336,6 +413,16 @@ public sealed class AiConversationService(
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var attachments = ValidateAttachments(request.Attachments);
+        foreach (var attachment in attachments)
+        {
+            var size = attachment.IsImage
+                ? Convert.FromBase64String(attachment.Content).LongLength
+                : Encoding.UTF8.GetByteCount(attachment.Content);
+            demoEnvironment.EnsureFileAllowed(
+                currentUser.UserId,
+                attachment.FileName,
+                size);
+        }
         request = request with { Attachments = attachments };
 
         if (string.IsNullOrWhiteSpace(request.UserMessage) &&

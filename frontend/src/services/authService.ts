@@ -1,4 +1,4 @@
-import type { AuthResponse, LoginPayload, RegisterPayload } from "../types/auth";
+import type { AuthResponse, DemoLoginPayload, LoginPayload, RegisterPayload } from "../types/auth";
 import { apiClient } from "./apiClient";
 import { tokenStore } from "./tokenStore";
 
@@ -10,6 +10,7 @@ async function establishSession(request: Promise<AuthResponse>) {
 
 export const authService = {
   login: (payload: LoginPayload) => establishSession(apiClient.post<AuthResponse>("/auth/login", payload, { retryOnUnauthorized: false })),
+  demoLogin: (payload: DemoLoginPayload) => establishSession(apiClient.post<AuthResponse>("/auth/demo-login", payload, { retryOnUnauthorized: false })),
   register: (payload: RegisterPayload) => establishSession(apiClient.post<AuthResponse>("/auth/register", payload, { retryOnUnauthorized: false })),
   refresh: () => apiClient.refreshSession(),
   logout: async () => {
