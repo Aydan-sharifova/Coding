@@ -13,11 +13,10 @@ RUN dotnet publish "src/Coding.Api/Coding.Api.csproj" \
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
 WORKDIR /app
-RUN addgroup -S -g 10001 app && adduser -S -D -H -u 10001 -G app app \
-    && mkdir -p /app/wwwroot/uploads/avatars \
+RUN mkdir -p /app/wwwroot/uploads/avatars \
     && chown -R app:app /app
 COPY --from=build --chown=app:app /out .
-USER 10001:10001
+USER $APP_UID
 ENV ASPNETCORE_HTTP_PORTS=8080 \
     DOTNET_EnableDiagnostics=0 \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
