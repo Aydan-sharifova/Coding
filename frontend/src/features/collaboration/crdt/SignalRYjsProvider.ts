@@ -58,6 +58,8 @@ export class SignalRYjsProvider {
     if (state.snapshot) Y.applyUpdate(this.doc, decodeBinary(state.snapshot), remoteOrigin);
     for (const update of state.updates) this.applyDocument(update);
     for (const message of [...this.pending.values()]) await this.send(message);
+    const recoveryUpdate = Y.encodeStateAsUpdate(this.doc);
+    await this.send({ projectId: this.projectId, fileId: this.fileId, clientId: this.clientId, updateId: await deterministicUpdateId(recoveryUpdate), encodedUpdate: encodeBinary(recoveryUpdate), updateType: "state", createdAt: new Date().toISOString(), plainContent: this.doc.getText("monaco").toString() });
     const awareness = encodeAwarenessUpdate(this.awareness, [this.doc.clientID]);
     await connection.send("SendAwarenessUpdate", { projectId: this.projectId, fileId: this.fileId, clientId: this.clientId, updateId: crypto.randomUUID(), encodedUpdate: encodeBinary(awareness), updateType: "awareness", createdAt: new Date().toISOString() });
     this.setStatus(this.pending.size ? "synchronizing" : "synchronized");
@@ -88,3 +90,8 @@ export class SignalRYjsProvider {
 }
 
 export { remoteOrigin };
+
+async function deterministicUpdateId(update: Uint8Array) {
+  const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", Uint8Array.from(update).buffer)).slice(0, 16); bytes[6] = (bytes[6] & 0x0f) | 0x40; bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((value) => value.toString(16).padStart(2, "0")).join(""); return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
