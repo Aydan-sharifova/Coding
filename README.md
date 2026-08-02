@@ -113,19 +113,20 @@ Jwt__Key=a-random-development-secret-at-least-32-bytes
 Database__ApplyMigrations=false
 ```
 
-Apply migrations, then run both processes:
+Apply migrations, then start the API and client together:
 
 ```bash
 dotnet tool restore  # if a tool manifest is added; otherwise use a global dotnet-ef 8 tool
 dotnet ef database update --project src/Coding.Infrastructure --startup-project src/Coding.Api
-dotnet run --project src/Coding.Api --launch-profile http
 ```
 
 ```bash
-cd frontend
-npm ci
-npm run dev
+npm --prefix frontend ci
+./scripts/dev-local.sh
 ```
+
+The combined development command stops both processes when you press Ctrl+C,
+so the browser client is not accidentally left running without its API.
 
 The client is at `http://localhost:5173`, the API at `http://localhost:5192`, and development Swagger at `http://localhost:5192/swagger`.
 

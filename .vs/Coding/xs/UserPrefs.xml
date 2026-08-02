@@ -8,7 +8,7 @@
     <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="src/Coding.Api/appsettings.json">
+  <MonoDevelop.Ide.Workbench ActiveDocument="tests/Coding.UnitTests/CoreWorkflowValidationTests.cs">
     <Files>
       <File FileName="src/Coding.Api/Controllers/AdminController.cs" />
       <File FileName="src/Coding.Api/Controllers/RefreshTokenController.cs" />
@@ -49,7 +49,7 @@
       <File FileName="src/Coding.Application/Services/Interfaces/IRoleService.cs" />
       <File FileName="src/Coding.Domain/Models/AIRequest.cs" />
       <File FileName="src/Coding.Domain/Models/User.cs" />
-      <File FileName="src/Coding.Api/appsettings.json" Line="50" Column="28" />
+      <File FileName="src/Coding.Api/appsettings.json" />
       <File FileName="src/Coding.Api/Properties/launchSettings.json" />
       <File FileName="src/Coding.Api/Controllers/NotificationController.cs" />
       <File FileName="src/Coding.Api/Configuration/SwaggerAuthorizationOperationFilter.cs" />
@@ -65,13 +65,20 @@
       <File FileName="src/Coding.Api/Controllers/CrudControllerBase.cs" />
       <File FileName="src/Coding.Api/Controllers/ChatController.cs" />
       <File FileName="src/Coding.Infrastructure/DependencyInjection.cs" />
+      <File FileName="tests/Coding.UnitTests/CoreWorkflowValidationTests.cs" Line="1" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State name="__root__">
-          <Node name="Coding" expanded="True">
-            <Node name="src" expanded="True" />
-            <Node name="Coding.UnitTests" selected="True" />
+          <Node name="Coding">
+            <Node name="src" expanded="True">
+              <Node name="Coding.Api">
+                <Node name="Controllers" expanded="True" />
+              </Node>
+            </Node>
+            <Node name="Coding.UnitTests">
+              <Node name="CoreWorkflowValidationTests.cs" selected="True" />
+            </Node>
           </Node>
         </State>
       </Pad>
