@@ -4,6 +4,7 @@ using System.Text.Json;
 using Coding.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Coding.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260731173350_AddAiAgent")]
+    partial class AddAiAgent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -884,94 +887,6 @@ namespace Coding.Migrations
                     b.HasIndex("UserId", "FileId", "EndAt");
 
                     b.ToTable("CodingSessions");
-                });
-
-            modelBuilder.Entity("Coding.Models.CollaborativeDocumentSnapshot", b =>
-                {
-                    b.Property<Guid>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ContentHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<byte[]>("EncodedState")
-                        .IsRequired()
-                        .HasColumnType("bytea");
-
-                    b.Property<Guid>("FileId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsCompacted")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("uuid");
-
-                    b.Property<long>("SequenceNumber")
-                        .HasColumnType("bigint");
-
-                    b.Property<byte[]>("StateVector")
-                        .IsRequired()
-                        .HasColumnType("bytea");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("ProjectId");
-
-                    b.HasIndex("FileId", "SequenceNumber")
-                        .IsUnique();
-
-                    b.ToTable("CollaborativeDocumentSnapshots");
-                });
-
-            modelBuilder.Entity("Coding.Models.CollaborativeDocumentUpdate", b =>
-                {
-                    b.Property<Guid>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<byte[]>("EncodedUpdate")
-                        .IsRequired()
-                        .HasColumnType("bytea");
-
-                    b.Property<Guid>("FileId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("uuid");
-
-                    b.Property<long>("SequenceNumber")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("UpdateId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("ProjectId");
-
-                    b.HasIndex("FileId", "SequenceNumber")
-                        .IsUnique();
-
-                    b.HasIndex("FileId", "UpdateId")
-                        .IsUnique();
-
-                    b.ToTable("CollaborativeDocumentUpdates");
                 });
 
             modelBuilder.Entity("Coding.Models.Conversation", b =>
@@ -2482,36 +2397,6 @@ namespace Coding.Migrations
                     b.Navigation("Project");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Coding.Models.CollaborativeDocumentSnapshot", b =>
-                {
-                    b.HasOne("Coding.Models.WorkspaceNode", null)
-                        .WithMany()
-                        .HasForeignKey("FileId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Coding.Models.Project", null)
-                        .WithMany()
-                        .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Coding.Models.CollaborativeDocumentUpdate", b =>
-                {
-                    b.HasOne("Coding.Models.WorkspaceNode", null)
-                        .WithMany()
-                        .HasForeignKey("FileId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Coding.Models.Project", null)
-                        .WithMany()
-                        .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Coding.Models.Conversation", b =>

@@ -13,12 +13,13 @@ using Coding.Application.Features.UserSettings;
 using Coding.Infrastructure.UserSettings;
 using Coding.Application.Features.AiAssistant;
 using Coding.Infrastructure.AiAssistant;
+using Coding.Infrastructure.AiAgent;
 using Coding.Infrastructure.Caching;
 using Coding.Application.Abstractions;
-using Coding.Application.Features.Collaboration;
-using Coding.Infrastructure.Collaboration;
 using Coding.Application.Features.Demo;
 using Coding.Infrastructure.Demo;
+using Coding.Application.Features.Collaboration;
+using Coding.Infrastructure.Collaboration;
 
 namespace Coding.Infrastructure;
 
@@ -119,6 +120,9 @@ public static class DependencyInjection
         services.AddScoped<IAiUsageTracker, AiUsageTracker>();
         services.AddScoped<IGuestAiService, GuestAiService>();
         services.AddScoped<IAiConversationService, AiConversationService>();
+
+        // AI agent tool registry, authorization, approval policy, and execution.
+        AiAgentServiceRegistration.AddAiAgentServices(services);
 
         return services;
     }

@@ -69,6 +69,13 @@ namespace Coding.Data
         public DbSet<AiMessage> AiMessages => Set<AiMessage>();
         public DbSet<AiUsageRecord> AiUsageRecords => Set<AiUsageRecord>();
 
+        public DbSet<AiAgentRun> AiAgentRuns => Set<AiAgentRun>();
+        public DbSet<AiAgentStep> AiAgentSteps => Set<AiAgentStep>();
+        public DbSet<AiToolCall> AiToolCalls => Set<AiToolCall>();
+        public DbSet<AiApprovalRequest> AiApprovalRequests => Set<AiApprovalRequest>();
+        public DbSet<AiPatch> AiPatches => Set<AiPatch>();
+        public DbSet<AiReviewFinding> AiReviewFindings => Set<AiReviewFinding>();
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
