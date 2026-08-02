@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.RateLimiting;
+using Coding.Application.Features.Collaboration;
 
 namespace Coding.Api.Collaboration;
 
@@ -14,6 +15,8 @@ namespace Coding.Api.Collaboration;
 public sealed class CollaborationHub(
     AppDbContext db,
     ICollaborationPresenceTracker presence,
+    ICollaborativeDocumentStore documentStore,
+    ICollaborativeContentMaterializer materializer,
     ILogger<CollaborationHub> logger) : Hub<ICollaborationClient>
 {
     private static readonly ConcurrentDictionary<Guid, long> LiveVersions = new();
@@ -116,6 +119,50 @@ public sealed class CollaborationHub(
         presence.LeaveFile(Context.ConnectionId, fileId);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, FileGroup(fileId));
         await Clients.OthersInGroup(FileGroup(fileId)).TypingStopped(fileId, UserId);
+    }
+
+    public async Task<CollaborativeStateMessage> JoinCollaborativeFile(Guid projectId, Guid fileId, string? stateVector = null)
+    {
+        await RequireCollaborativeFile(projectId, fileId);
+        presence.JoinProject(Context.ConnectionId, projectId);
+        presence.JoinFile(Context.ConnectionId, fileId);
+        await Groups.AddToGroupAsync(Context.ConnectionId, ProjectGroup(projectId));
+        await Groups.AddToGroupAsync(Context.ConnectionId, FileGroup(fileId));
+        return await LoadCollaborativeState(fileId);
+    }
+
+    public async Task LeaveCollaborativeFile(Guid projectId, Guid fileId)
+    {
+        if (!presence.IsInFile(Context.ConnectionId, fileId)) return;
+        presence.LeaveFile(Context.ConnectionId, fileId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, FileGroup(fileId));
+    }
+
+    public async Task SendDocumentUpdate(CollaborativeUpdateMessage message)
+    {
+        if (message.UpdateId == Guid.Empty || string.IsNullOrWhiteSpace(message.EncodedUpdate)) throw new HubException("A valid Yjs update is required.");
+        if (!presence.IsInFile(Context.ConnectionId, message.FileId)) throw new HubException("Join the collaborative file before sending updates.");
+        await RequireCollaborativeFile(message.ProjectId, message.FileId);
+        byte[] update; try { update = Convert.FromBase64String(message.EncodedUpdate); } catch (FormatException) { throw new HubException("The Yjs update is not valid Base64."); }
+        if (update.Length > 2_000_000) throw new HubException("The Yjs update exceeds the maximum size.");
+        var appended = await documentStore.AppendUpdateAsync(message.ProjectId, message.FileId, message.UpdateId, update, UserId, Context.ConnectionAborted);
+        if (!appended.Appended) return;
+        var trusted = message with { ClientId = message.ClientId, CreatedAt = DateTime.UtcNow };
+        await Clients.OthersInGroup(FileGroup(message.FileId)).DocumentUpdateReceived(trusted);
+        if (message.PlainContent is not null) materializer.Enqueue(message.ProjectId, message.FileId, UserId, message.PlainContent);
+    }
+
+    public async Task<CollaborativeStateMessage> RequestDocumentState(Guid projectId, Guid fileId)
+    {
+        await RequireCollaborativeFile(projectId, fileId); return await LoadCollaborativeState(fileId);
+    }
+
+    public async Task SendAwarenessUpdate(CollaborativeUpdateMessage message)
+    {
+        if (!presence.IsInFile(Context.ConnectionId, message.FileId)) throw new HubException("Join the collaborative file before sending awareness.");
+        await RequireCollaborativeFile(message.ProjectId, message.FileId);
+        _ = Convert.FromBase64String(message.EncodedUpdate);
+        await Clients.OthersInGroup(FileGroup(message.FileId)).AwarenessUpdateReceived(message with { CreatedAt = DateTime.UtcNow, PlainContent = null });
     }
 
     public async Task<long> SendCodeOperation(CodeOperation operation)
@@ -247,6 +294,20 @@ public sealed class CollaborationHub(
             throw new HubException("File not found.");
         await RequireProjectMember(projectId.Value);
         return projectId.Value;
+    }
+
+    private async Task RequireCollaborativeFile(Guid projectId, Guid fileId)
+    {
+        var exists = await db.WorkspaceNodes.AsNoTracking().AnyAsync(node => node.ID == fileId && node.ProjectId == projectId && node.NodeType == WorkspaceNodeType.File && !node.IsDeleted, Context.ConnectionAborted);
+        if (!exists) throw new HubException("The file does not belong to the supplied project.");
+        await RequireProjectMember(projectId);
+    }
+
+    private async Task<CollaborativeStateMessage> LoadCollaborativeState(Guid fileId)
+    {
+        var snapshot = await documentStore.GetLatestSnapshotAsync(fileId, Context.ConnectionAborted); var after = snapshot?.SequenceNumber ?? 0;
+        var updates = await documentStore.GetUpdatesAfterAsync(fileId, after, Context.ConnectionAborted);
+        return new(snapshot is null ? null : Convert.ToBase64String(snapshot.EncodedState), updates.Select(x => new CollaborativeUpdateMessage(x.ProjectId, x.FileId, string.Empty, x.UpdateId, Convert.ToBase64String(x.EncodedUpdate), "document", x.CreatedAt)).ToArray(), updates.LastOrDefault()?.SequenceNumber ?? after);
     }
 
     private async Task<long> InitializeLiveVersion(Guid fileId)

@@ -33,6 +33,8 @@ namespace Coding.Data
         public DbSet<WorkspaceNode> WorkspaceNodes => Set<WorkspaceNode>();
         public DbSet<FileContent> FileContents => Set<FileContent>();
         public DbSet<FileVersion> FileVersions => Set<FileVersion>();
+        public DbSet<CollaborativeDocumentSnapshot> CollaborativeDocumentSnapshots => Set<CollaborativeDocumentSnapshot>();
+        public DbSet<CollaborativeDocumentUpdate> CollaborativeDocumentUpdates => Set<CollaborativeDocumentUpdate>();
 
         public DbSet<Folder> Folders => Set<Folder>();
 

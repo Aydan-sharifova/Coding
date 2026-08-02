@@ -38,6 +38,8 @@ public sealed record UserPresence(Guid ProjectId, CollaborationUser User);
 public sealed record FileChangedMessage(Guid FileId, Guid ChangedByUserId, int VersionNumber, string ConcurrencyToken);
 public sealed record ResyncRequiredMessage(Guid FileId, long ServerVersion, string Reason);
 public sealed record OperationAcceptedMessage(Guid OperationId, Guid FileId, long ServerVersion);
+public sealed record CollaborativeUpdateMessage(Guid ProjectId, Guid FileId, string ClientId, Guid UpdateId, string EncodedUpdate, string UpdateType, DateTime CreatedAt, string? PlainContent = null);
+public sealed record CollaborativeStateMessage(string? Snapshot, IReadOnlyList<CollaborativeUpdateMessage> Updates, long SequenceNumber);
 
 public interface ICollaborationClient
 {
@@ -51,6 +53,9 @@ public interface ICollaborationClient
     Task TypingStarted(Guid fileId, Guid userId);
     Task TypingStopped(Guid fileId, Guid userId);
     Task FileChanged(FileChangedMessage message);
+    Task DocumentUpdateReceived(CollaborativeUpdateMessage message);
+    Task AwarenessUpdateReceived(CollaborativeUpdateMessage message);
+    Task CollaborativeDocumentReset(CollaborativeUpdateMessage message);
     Task ReceiveMessage(ChatMessageItem message);
     Task MessageRead(Guid conversationId, Guid userId, Guid? throughMessageId, DateTime readAt);
     Task ConversationUpdated(Guid conversationId);

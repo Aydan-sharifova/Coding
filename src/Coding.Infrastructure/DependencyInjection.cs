@@ -15,6 +15,8 @@ using Coding.Application.Features.AiAssistant;
 using Coding.Infrastructure.AiAssistant;
 using Coding.Infrastructure.Caching;
 using Coding.Application.Abstractions;
+using Coding.Application.Features.Collaboration;
+using Coding.Infrastructure.Collaboration;
 using Coding.Application.Features.Demo;
 using Coding.Infrastructure.Demo;
 
@@ -43,6 +45,11 @@ public static class DependencyInjection
 
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("postgresql");
+
+        services.AddScoped<ICollaborativeDocumentStore, CollaborativeDocumentStore>();
+        services.AddSingleton<CollaborativeContentMaterializer>();
+        services.AddSingleton<ICollaborativeContentMaterializer>(provider => provider.GetRequiredService<CollaborativeContentMaterializer>());
+        services.AddHostedService(provider => provider.GetRequiredService<CollaborativeContentMaterializer>());
 
         services.AddScoped(typeof(ICrudService<,,,>), typeof(CrudService<,,,>));
         services.AddScoped<IAuthenticationService, AuthenticationService>();
